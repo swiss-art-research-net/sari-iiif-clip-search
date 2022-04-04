@@ -4,4 +4,5 @@ services:
     container_name: ${PROJECT_NAME}_service
     build: ./service
     volumes:
+      - ./data:/workdir/data
       - ./src:/workdir/src
