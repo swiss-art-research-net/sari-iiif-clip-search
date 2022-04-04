@@ -1,1 +1,2 @@
 src/clip/bpe_simple_vocab_16e6.txt.gz filter=lfs diff=lfs merge=lfs -text
+precomputedFeatures/bso/features.npy filter=lfs diff=lfs merge=lfs -text
