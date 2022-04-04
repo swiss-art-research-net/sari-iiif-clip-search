@@ -1,4 +1,4 @@
-from sariIiifClipSearch import ClipSearch
+from sariIiifClipSearch import Images
 from pathlib import Path
 
 dataDir = '/workdir/data/'
@@ -16,14 +16,14 @@ LIMIT 100
 endpoint = 'http://blazegraph:8080/blazegraph/sparql'
 
 def run():
-    clipSearch=ClipSearch(
+    images=Images(
         dataDir=dataDir,
-        mode=ClipSearch.MODE_SPARQL,
+        mode=Images.MODE_SPARQL,
         imageQuery=imageQuery,
         endpoint=endpoint)
-    clipSearch.queryImages()
-    clipSearch.downloadImages()
-    clipSearch.processImages()
+    images.queryImages()
+    images.downloadImages()
+    images.processImages()
     print("OK")
 
 if __name__ == "__main__":
