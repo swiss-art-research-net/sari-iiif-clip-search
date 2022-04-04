@@ -2,9 +2,15 @@ import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'clip'))
 
 import csv
+import math
+import numpy as np
+import pandas as pd
+import torch
 import urllib.request
+from clip import clip
 from hashlib import blake2b
 from pathlib import Path
+from PIL import Image
 from SPARQLWrapper import SPARQLWrapper, JSON
 from multiprocessing.pool import ThreadPool
 
@@ -20,7 +26,8 @@ class Images:
         imageCSV=None,
         dataDir, 
         imageQuery=None, 
-        threads=16):
+        threads=16,
+        batchSize=16):
         if not dataDir:
             raise Exception("dataDir is required")
         if mode == self.MODE_SPARQL:
@@ -31,6 +38,8 @@ class Images:
 
         self.mode = mode
         self.iiifColumn = iiifColumn
+        self.threads = threads
+        self.batchSize = batchSize
 
         self.imageDir = Path(dataDir) / 'images'
         self.featuresDir = Path(dataDir) / 'features'
@@ -44,8 +53,6 @@ class Images:
             self.imageCSV = Path(dataDir) / 'images.csv'
         else:
             self.imageCSV = Path(imageCSV)
-        
-        self.threads = threads
         
         if self.mode == self.MODE_SPARQL:
             self.imageQuery = imageQuery
@@ -98,10 +105,54 @@ class Images:
         pool.map(self._downloadImage, urls)
 
     def processImages(self):
+
+        def compute_clip_features(photos_batch):
+            # Load all the photos from the files
+            photos = [Image.open(photo_file) for photo_file in photos_batch]
+            
+            # Preprocess all photos
+            photos_preprocessed = torch.stack([preprocess(photo) for photo in photos]).to(device)
+
+            with torch.no_grad():
+                # Encode the photos batch to compute the feature vectors and normalize them
+                photos_features = model.encode_image(photos_preprocessed)
+                photos_features /= photos_features.norm(dim=-1, keepdim=True)
+
+            # Transfer the feature vectors back to the CPU and convert to numpy
+            return photos_features.cpu().numpy()
+
         imageFiles = list(self.imageDir.glob('*.jpg'))
         print(f"Found {len(imageFiles)} images")
 
-        from clip import clip
+        # Load the open CLIP model
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        model, preprocess = clip.load("ViT-B/32", device=device)
+        
+        batches = math.ceil(len(imageFiles) / self.batchSize)
+
+        for i in range(batches):
+            print(f"Processing batch {i+1}/{batches}")
+
+            batchIdsPath = self.featuresDir / f"{i:010d}.csv"
+            batchFeaturesPath = self.featuresDir / f"{i:010d}.npy"
+
+            # Only do the processing if the batch wasn't processed yet
+            if not batchFeaturesPath.exists():
+                #try:
+                # Get the batch of images
+                batchFiles = imageFiles[i*self.batchSize : (i+1)*self.batchSize]
+
+                # Compute the features for the batch and save to a numpy file
+                batchFeatures = compute_clip_features(batchFiles)
+                np.save(batchFeaturesPath, batchFeatures)
+
+                # Save the batch ID to a CSV file
+                photoIDs = [imageFile.name.split(".")[0] for imageFile in batchFiles]
+                photoIDsData = pd.DataFrame(photoIDs, columns=["photo_id"])
+                photoIDsData.to_csv(batchIdsPath, index=False)
+                #except:
+                    # Catch the exception if the processing fails for some reason
+                #    print(f"Cannot process batch {i}")
 
         return True
 
