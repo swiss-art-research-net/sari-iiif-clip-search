@@ -14,14 +14,12 @@ class Images:
         mode=MODE_CSV, 
         endpoint=None, 
         iiifColumn="iiif_url",
-        imageCSV,
-        imageDir, 
+        imageCSV=None,
+        dataDir, 
         imageQuery=None, 
         threads=16):
-        if not imageDir:
-            raise Exception("imageDir is required")
-        if not imageCSV:
-            raise Exception("imageCSV is required in all modes")
+        if not dataDir:
+            raise Exception("dataDir is required")
         if mode == self.MODE_SPARQL:
             if not imageQuery:
                 raise Exception("imageQuery is required in SPARQL mode")
@@ -30,8 +28,13 @@ class Images:
 
         self.mode = mode
         self.iiifColumn = iiifColumn
-        self.imageDir = imageDir
-        self.imageCSV = imageCSV
+
+        self.imageDir = Path(dataDir) / 'images'
+        if not imageCSV:
+            self.imageCSV = Path(dataDir) / 'images.csv'
+        else:
+            self.imageCSV = Path(imageCSV)
+        
         self.threads = threads
         
         if self.mode == self.MODE_SPARQL:

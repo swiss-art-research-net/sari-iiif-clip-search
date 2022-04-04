@@ -2,8 +2,6 @@ from jobs import Images
 from pathlib import Path
 
 dataDir = '/workdir/data/'
-imageDir = Path(dataDir) / 'images'
-imageCSV = Path(dataDir) / 'images.csv'
 imageQuery = """
 PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX la: <https://linked.art/ns/terms/>
@@ -19,13 +17,13 @@ endpoint = 'http://blazegraph:8080/blazegraph/sparql'
 
 def run():
     images=Images(
-        imageCSV=imageCSV,
-        imageDir=imageDir, 
+        dataDir=dataDir,
         mode=Images.MODE_SPARQL,
         imageQuery=imageQuery,
         endpoint=endpoint)
     images.queryImages()
     images.downloadImages()
+    images.processImages()
     print("OK")
 
 if __name__ == "__main__":
