@@ -14,6 +14,8 @@ from PIL import Image
 from SPARQLWrapper import SPARQLWrapper, JSON
 from multiprocessing.pool import ThreadPool
 
+IDENTIFIERCOLUMN = 'localIdentifier'
+
 class Images:
     
     MODE_SPARQL = 1
@@ -84,14 +86,17 @@ class Images:
 
     def _saveSPARQLResultToCSV(self, sparqlResult):
         # Save to CSV
-        fieldnames = sparqlResult['head']['vars']
+        fieldnames = sparqlResult['head']['vars'] + [IDENTIFIERCOLUMN]
         with open(self.imageCSV, 'w') as f:
             csvWriter = csv.DictWriter(f, fieldnames=fieldnames)
             csvWriter.writeheader()
             for result in sparqlResult['results']['bindings']:
                 row = {}
                 for field in fieldnames:
-                    row[field] = result[field]['value']
+                    if field in result:
+                        row[field] = result[field]['value']
+                # Add local filename of image
+                row[IDENTIFIERCOLUMN] = self._customHash(row[self.iiifColumn])
                 csvWriter.writerow(row)
 
     def downloadImages(self):
@@ -138,21 +143,28 @@ class Images:
 
             # Only do the processing if the batch wasn't processed yet
             if not batchFeaturesPath.exists():
-                #try:
-                # Get the batch of images
-                batchFiles = imageFiles[i*self.batchSize : (i+1)*self.batchSize]
+                try:
+                    # Get the batch of images
+                    batchFiles = imageFiles[i*self.batchSize : (i+1)*self.batchSize]
 
-                # Compute the features for the batch and save to a numpy file
-                batchFeatures = compute_clip_features(batchFiles)
-                np.save(batchFeaturesPath, batchFeatures)
+                    # Compute the features for the batch and save to a numpy file
+                    batchFeatures = compute_clip_features(batchFiles)
+                    np.save(batchFeaturesPath, batchFeatures)
 
-                # Save the batch ID to a CSV file
-                photoIDs = [imageFile.name.split(".")[0] for imageFile in batchFiles]
-                photoIDsData = pd.DataFrame(photoIDs, columns=["photo_id"])
-                photoIDsData.to_csv(batchIdsPath, index=False)
-                #except:
+                    # Save the batch ID to a CSV file
+                    photoIDs = [imageFile.name.split(".")[0] for imageFile in batchFiles]
+                    photoIDsData = pd.DataFrame(photoIDs, columns=["image_id"])
+                    photoIDsData.to_csv(batchIdsPath, index=False)
+                except:
                     # Catch the exception if the processing fails for some reason
-                #    print(f"Cannot process batch {i}")
+                    print(f"Cannot process batch {i}")
+
+        featuresList = [np.load(featuresFile) for featuresFile in sorted(self.featuresDir.glob("*.npy"))]
+        features = np.concatenate(featuresList)
+        np.save(self.featuresDir / "features.npy", features)
+
+        imageIDs = pd.concat([pd.read_csv(idsFile) for idsFile in sorted(self.featuresDir.glob("*.csv"))])
+        imageIDs.to_csv(self.featuresDir / "imageIds.csv", index=False)
 
         return True
 
@@ -166,10 +178,54 @@ class Images:
         except Exception as e:
             return e
         # Save to CSV
-        try:
-            self._saveSPARQLResultToCSV(results)
-        except Exception as e:
-            return e
-
+        self._saveSPARQLResultToCSV(results)
+        
         return True
         
+class Query:
+
+    def __init__(self, *, dataDir, imageCSV=None, iiifColumn="iiif_url"):
+        if not dataDir:
+            raise Exception("dataDir is required")
+
+        self.iiifColumn = iiifColumn
+        self.imageDir = Path(dataDir) / 'images'
+        self.featuresDir = Path(dataDir) / 'features'
+        if not imageCSV:
+            self.imageCSV = Path(dataDir) / 'images.csv'
+        else:
+            self.imageCSV = Path(imageCSV)
+
+        self.imageFeatures = np.load(self.featuresDir / 'features.npy')
+        self.imageIDs = pd.read_csv(self.featuresDir / 'imageIds.csv')
+        self.imageData = pd.read_csv(self.imageCSV)
+
+        # Load the open CLIP model
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+        self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
+
+    def query(self, queryString, *, numResults=5):
+        with torch.no_grad():
+            # Encode and normalize the description using CLIP
+            textEncoded = self.model.encode_text(clip.tokenize(queryString).to(self.device))
+            textEncoded /= textEncoded.norm(dim=-1, keepdim=True)
+
+        # Retrieve the description vector and the photo vectors
+        textFeatures = textEncoded.cpu().numpy()
+
+        # Compute the similarity between the descrption and each photo using the Cosine similarity
+        similarities = list((textFeatures @ self.imageFeatures.T).squeeze(0))
+
+        # Sort the images by their similarity score
+        bestImages = sorted(zip(similarities, range(self.imageFeatures.shape[0])), key=lambda x: x[0], reverse=True)
+
+        # Get the top 10 images
+        results = []
+        for image in bestImages[:numResults]:
+            result = {
+                'score': image[0],
+                'imageId': self.imageIDs.iloc[image[1]]['image_id'],
+            }
+            result['url'] = self.imageData.loc[self.imageData[IDENTIFIERCOLUMN] == result['imageId']][self.iiifColumn].values[0]
+            results.append(result)
+        return results

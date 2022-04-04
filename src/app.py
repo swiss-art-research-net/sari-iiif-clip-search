@@ -1,4 +1,4 @@
-from sariIiifClipSearch import Images
+from sariIiifClipSearch import Images, Query
 from pathlib import Path
 
 dataDir = '/workdir/data/'
@@ -24,7 +24,11 @@ def run():
     images.queryImages()
     images.downloadImages()
     images.processImages()
-    print("OK")
+
+    clipQuery=Query(
+        dataDir=dataDir
+    )
+    print(clipQuery.query("A mountain"))
 
 if __name__ == "__main__":
     run()
