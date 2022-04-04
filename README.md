@@ -2,7 +2,7 @@
 
 ## About
 
-A library to index images based on IIIF URLs and enable semantic free text search based on [CLIP](OpenAI's CLIP](https://github.com/openai/CLIP)]
+A library to index images based on IIIF URLs and enable semantic free text search based on [CLIP](https://github.com/openai/CLIP).
 
 ## Usage
 
