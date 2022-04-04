@@ -14,7 +14,7 @@ from PIL import Image
 from SPARQLWrapper import SPARQLWrapper, JSON
 from multiprocessing.pool import ThreadPool
 
-class Images:
+class ClipSearch:
     
     MODE_SPARQL = 1
     MODE_CSV = 2
