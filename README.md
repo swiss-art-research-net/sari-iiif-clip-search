@@ -1,5 +1,12 @@
 # SARI IIIF Clip Search
 
+## About
+
+A library to index images based on IIIF URLs and enable semantic free text search based on [CLIP](OpenAI's CLIP](https://github.com/openai/CLIP)]
+
+## Usage
+
+Currently a work in progress. Refer to [src/app.py]() for the functionality.
 ## Acknowledgements
 
 This code is based on [Unsplash Image Search
