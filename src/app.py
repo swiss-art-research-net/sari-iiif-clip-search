@@ -16,19 +16,25 @@ LIMIT 100
 endpoint = 'http://blazegraph:8080/blazegraph/sparql'
 
 def run():
-    images=Images(
-        dataDir=dataDir,
-        mode=Images.MODE_SPARQL,
-        imageQuery=imageQuery,
-        endpoint=endpoint)
-    images.queryImages()
-    images.downloadImages()
-    images.processImages()
+
+    performProcessing = True
+
+    if performProcessing:
+        images=Images(
+            dataDir=dataDir,
+            mode=Images.MODE_SPARQL,
+            imageQuery=imageQuery,
+            endpoint=endpoint)
+        images.queryImages()
+        images.downloadImages()
+        images.processImages()
 
     clipQuery=Query(
         dataDir=dataDir
     )
-    print(clipQuery.query("A mountain"))
+    queryStrings = ["A mountain", "A lake", "People"]
+    for queryString in queryStrings:
+        print(queryString, clipQuery.query(queryString, numResults=1))
 
 if __name__ == "__main__":
     run()
