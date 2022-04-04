@@ -1,5 +1,4 @@
 from sariIiifClipSearch import Images, Query
-from pathlib import Path
 
 dataDir = '/workdir/data/'
 imageQuery = """
