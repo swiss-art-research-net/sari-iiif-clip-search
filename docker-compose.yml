@@ -5,4 +5,5 @@ services:
     build: ./service
     volumes:
       - ./data:/workdir/data
+      - ./precomputedFeatures:/precomputedFeatures
       - ./src:/workdir/src
