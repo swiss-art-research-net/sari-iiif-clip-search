@@ -1,3 +1,6 @@
+import sys, os
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'clip'))
+
 import csv
 import urllib.request
 from hashlib import blake2b
@@ -33,7 +36,7 @@ class Images:
         self.featuresDir = Path(dataDir) / 'features'
         if not self.imageDir.exists():
             self.imageDir.mkdir(parents=True)
-            
+
         if not self.featuresDir.exists():
             self.featuresDir.mkdir(parents=True)
         
@@ -56,8 +59,7 @@ class Images:
     def _downloadImage(self, iiifUrl):
         width = 640
         url = iiifUrl + '/full/' + str(width) + ',/0/default.jpg'
-        photoId = self._customHash(iiifUrl)
-        photoPath = Path(self.imageDir) / (photoId + ".jpg")
+        photoPath = self._getFilePathForImage(iiifUrl)
 
         # Only download a photo if it doesn't exist
         if not photoPath.exists():
@@ -67,6 +69,11 @@ class Images:
                 # Catch the exception if the download fails for some reason
                 print(f"Cannot download {url}")
                 pass
+
+    def _getFilePathForImage(self, iiifUrl):
+        photoId = self._customHash(iiifUrl)
+        photoPath = Path(self.imageDir) / (photoId + ".jpg")
+        return photoPath
 
     def _saveSPARQLResultToCSV(self, sparqlResult):
         # Save to CSV
@@ -91,6 +98,11 @@ class Images:
         pool.map(self._downloadImage, urls)
 
     def processImages(self):
+        imageFiles = list(self.imageDir.glob('*.jpg'))
+        print(f"Found {len(imageFiles)} images")
+
+        from clip import clip
+
         return True
 
     def queryImages(self):
