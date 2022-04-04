@@ -30,6 +30,13 @@ class Images:
         self.iiifColumn = iiifColumn
 
         self.imageDir = Path(dataDir) / 'images'
+        self.featuresDir = Path(dataDir) / 'features'
+        if not self.imageDir.exists():
+            self.imageDir.mkdir(parents=True)
+            
+        if not self.featuresDir.exists():
+            self.featuresDir.mkdir(parents=True)
+        
         if not imageCSV:
             self.imageCSV = Path(dataDir) / 'images.csv'
         else:
@@ -82,6 +89,9 @@ class Images:
 
         pool = ThreadPool(self.threads)
         pool.map(self._downloadImage, urls)
+
+    def processImages(self):
+        return True
 
     def queryImages(self):
         # Execute Query
