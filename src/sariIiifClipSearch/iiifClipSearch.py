@@ -17,6 +17,9 @@ from multiprocessing.pool import ThreadPool
 IDENTIFIERCOLUMN = 'localIdentifier'
 
 class Images:
+    """
+    This class can be used to download and process images, either based on a CSV file or a SPARQL query.
+    """
     
     MODE_SPARQL = 1
     MODE_CSV = 2
@@ -30,6 +33,45 @@ class Images:
         imageQuery=None, 
         threads=16,
         batchSize=16):
+
+        """
+        Instantiate and initialise the class.
+
+        Parameters:
+            mode: The mode of the class. Can be either MODE_CSV or MODE_SPARQL. Defaults to MODE_CSV.
+            imageCSV: The path to the CSV file containing the images. Required if mode is MODE_CSV.
+            imageQuery: The SPARQL query to execute to get the images. Required if mode is MODE_SPARQL.
+            iiifColumn: The column in the CSV file, or the variable in the SPARQL query that contains the IIIF URL. Defaults to "iiif_url".
+            endpoint: The SPARQL endpoint to query. Required if mode is MODE_SPARQL.
+            dataDir: The directory to save the images and features to.
+            threads: The number of threads to use when downloading images. Defaults to 16.
+            batchSize: The batch size of images to process on the GPU. Defaults to 16.
+
+        Usage Example:
+
+            # Initialise in CSV mode. 
+            # The images.csv file must contain a column with the name 'iiif_url' that contains the IIIF URL of the images.
+            # If another column name is used, it must be specified in the iiifColumn parameter.
+            images = Images(mode=Images.MODE_CSV, imageCSV='images.csv', dataDir='data')
+
+            # Initialise in SPARQL mode.
+            # The SPARQL query must return a column with the name 'iiif_url' that contains the IIIF URL of the images.
+            # If another column name is used, it must be specified in the iiifColumn parameter.
+            # The SPARQL endpoint must be specified in the endpoint parameter.
+            imageQuery = \"""
+                PREFIX dcterms: <http://purl.org/dc/terms/>
+                PREFIX la: <https://linked.art/ns/terms/>
+                SELECT ?iiif_url WHERE {
+                    ?service a la:DigitalService ;
+                    dcterms:conformsTo <http://iiif.io/api/image> ;
+                    la:access_point ?iiif_url .
+                } 
+                ORDER BY ?iiif_url
+                LIMIT 100
+            \"""
+            images = Images(mode=Images.MODE_SPARQL, imageQuery=imageQuery, endpoint='http://example.org/sparql', dataDir='data')
+        """ 
+
         if not dataDir:
             raise Exception("dataDir is required")
         if mode == self.MODE_SPARQL:
@@ -100,6 +142,10 @@ class Images:
                 csvWriter.writerow(row)
 
     def downloadImages(self):
+        """
+        Download the images from the CSV file.
+        If SPARQL mode is used, the images need to be queried first and will then be automatically savedin a CSV file.
+        """
         urls = []
         with open(self.imageCSV, 'r') as f:
             reader = csv.DictReader(f)
@@ -110,6 +156,9 @@ class Images:
         pool.map(self._downloadImage, urls)
 
     def processImages(self):
+        """
+        Compute the features of the images that have been downloaded.
+        """
 
         def compute_clip_features(photos_batch):
             # Load all the photos from the files
@@ -169,6 +218,9 @@ class Images:
         return True
 
     def queryImages(self):
+        """"
+        Query the images from the SPARQL endpoint and save the result to a CSV file.
+        """
         # Execute Query
         sparql = SPARQLWrapper(self.endpoint)
         sparql.setQuery(self.imageQuery)
@@ -183,8 +235,18 @@ class Images:
         return True
         
 class Query:
+    """
+    This class can be used to query the previously processed image using CLIP
+    """
 
     def __init__(self, *, dataDir, imageCSV=None, iiifColumn="iiif_url"):
+        """
+        Initialize the query object.
+        params:
+            dataDir: The directory where the features and image IDs are stored.
+            imageCSV: The CSV file containing the image IDs. Only needs to be used if CSV mode has been used to process the images
+            iiifColumn: The column in the CSV file or the variable in the SPARQL query containing the IIIF URLs.
+        """
         if not dataDir:
             raise Exception("dataDir is required")
 
@@ -205,6 +267,12 @@ class Query:
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
 
     def query(self, queryString, *, numResults=5):
+        """
+        Query the images using the query string.
+        params:
+            queryString: The query string to be used for the query.
+            numResults: The number of results to be returned. Default is 5.
+        """
         with torch.no_grad():
             # Encode and normalize the description using CLIP
             textEncoded = self.model.encode_text(clip.tokenize(queryString).to(self.device))
@@ -219,7 +287,7 @@ class Query:
         # Sort the images by their similarity score
         bestImages = sorted(zip(similarities, range(self.imageFeatures.shape[0])), key=lambda x: x[0], reverse=True)
 
-        # Get the top 10 images
+        # Get the top images
         results = []
         for image in bestImages[:numResults]:
             result = {
