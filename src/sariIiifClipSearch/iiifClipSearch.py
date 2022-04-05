@@ -290,10 +290,12 @@ class Query:
         # Get the top images
         results = []
         for image in bestImages[:numResults]:
+            imageId = self.imageIDs.iloc[image[1]]['image_id']
+            imageUrl = self.imageData.loc[self.imageData[IDENTIFIERCOLUMN] == imageId][self.iiifColumn].values[0]
             result = {
-                'score': image[0],
-                'imageId': self.imageIDs.iloc[image[1]]['image_id'],
+                'score': float(image[0]),
+                'imageId': str(imageId),
+                'url': str(imageUrl)
             }
-            result['url'] = self.imageData.loc[self.imageData[IDENTIFIERCOLUMN] == result['imageId']][self.iiifColumn].values[0]
             results.append(result)
         return results
