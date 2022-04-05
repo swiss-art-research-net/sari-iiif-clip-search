@@ -1,5 +1,16 @@
 # SARI IIIF CLIP Search
 
+  * [About](#about)
+  * [Query Service](#query-service)
+    + [REST API](#rest-api)
+    + [SPARQL Endpoint](#sparql-endpoint)
+  * [Extract image features](#extract-image-features)
+    + [SPARQL mode example](#sparql-mode-example)
+    + [CSV mode example](#csv-mode-example)
+    + [Parameters](#parameters)
+  * [REST API Swagger](#rest-api-swagger)
+  * [Acknowledgements](#acknowledgements)
+
 ## About
 
 A library to index images based on IIIF URLs and enable semantic free text search based on [CLIP](https://github.com/openai/CLIP).
@@ -142,7 +153,7 @@ python src/build.py \
     --batchSize: The number of images to process in one batch. Optional, defaults to 64.
 ```
 
-## REST API
+## REST API Swagger
 
 ```swagger
 swagger: "2.0"
