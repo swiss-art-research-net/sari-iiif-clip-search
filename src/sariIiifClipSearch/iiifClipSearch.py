@@ -266,7 +266,7 @@ class Query:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
 
-    def query(self, queryString, *, numResults=5):
+    def query(self, queryString, *, numResults=5, minScore=0.2):
         """
         Query the images using the query string.
         params:
@@ -290,10 +290,13 @@ class Query:
         # Get the top images
         results = []
         for image in bestImages[:numResults]:
+            score = float(image[0])
+            if score < minScore:
+                break
             imageId = self.imageIDs.iloc[image[1]]['image_id']
             imageUrl = self.imageData.loc[self.imageData[IDENTIFIERCOLUMN] == imageId][self.iiifColumn].values[0]
             result = {
-                'score': float(image[0]),
+                'score': score,
                 'imageId': str(imageId),
                 'url': str(imageUrl)
             }
