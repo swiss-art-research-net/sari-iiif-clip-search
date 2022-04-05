@@ -1,12 +1,12 @@
 version: "3"
 services:
-  service:
+  clip-service:
     container_name: ${PROJECT_NAME}_service
     build: .
     environment:
       - CLIP_DATA_DIRECTORY=${CLIP_DATA_DIRECTORY}
     ports:
-      - 5000:5000
+      - ${PORT}:5000
     volumes:
       - ./data:/workdir/data
       - ./precomputedFeatures:/precomputedFeatures
