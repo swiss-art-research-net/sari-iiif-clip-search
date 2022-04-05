@@ -46,6 +46,12 @@ def sparql():
     
     return Response('{"status": "OK"}', mimetype='application/json')
 
+def error(message):
+  """
+  Generate a JSON error object
+  """
+  return {"error": message}
+
 def extractRequestFromSparqlQuery(query):
     """
     Given an SPARQL query this function extracts the request.
@@ -86,8 +92,6 @@ def extractRequestFromSparqlQuery(query):
         return value[len(prefix):]
 
     request = {}
-    
-    app.logger.info(parsedQuery)
 
     for triple in parsedQuery['where']:
         if triple['s']['type'] == Variable and getValueWithoutPrefix(triple['o']['value']) == 'Request':
@@ -117,8 +121,33 @@ def processSparqlQuery(query):
   Accepts a parsed SPARQL query, extracts and processes the requests and returns a SPARQL response.
   """
   request = extractRequestFromSparqlQuery(query)
-  #result = queryWithRequest(query)
-  return request
+  result = queryWithRequest(request)
+  return result
+
+def queryWithRequest(request):
+    if not 'queryString' in request:
+        return error('No query string provided')
+    if 'options' in request:
+        if 'minScore' in request['options']:
+            minScore = float(request['options']['minScore'])
+        else:
+            minScore = 0.2
+        if 'numResults' in request['options']:
+            numResults = int(request['options']['numResults'])
+        else:
+            numResults = 10
+    results = clipQuery.query(request['queryString'], minScore=minScore, numResults=numResults)
+    filteredResults = []
+    if 'select' in request:
+        for result in results:
+            filteredResult = {}
+            for key, value in result.items():
+                if key in request['select']:
+                    filteredResult[key] = value
+            filteredResults.append(filteredResult)
+        return filteredResults
+    else:
+        return results
 
 def queryWithString(queryString, *, minScore=0.2, numResults=10):
     results = clipQuery.query(queryString, numResults=numResults, minScore=minScore)
