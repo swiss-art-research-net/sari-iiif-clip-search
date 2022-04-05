@@ -60,7 +60,7 @@ LIMIT 100
 endpoint = 'http://blazegraph:8080/blazegraph/sparql'
 
 def build(options):
-    from sariIiifClipSearch import Images, Query
+    from sariIiifClipSearch import Images
 
     if options['mode'] == 'SPARQL':
         mode = Images.MODE_SPARQL
