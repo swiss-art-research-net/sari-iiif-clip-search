@@ -2,3 +2,4 @@ data/*
 notebooks
 *.pyc
 docker-compose.override.yml
+.env
