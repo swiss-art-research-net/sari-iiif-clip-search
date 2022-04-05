@@ -32,7 +32,7 @@ class Images:
         dataDir, 
         imageQuery=None, 
         threads=16,
-        batchSize=16):
+        batchSize=64):
 
         """
         Instantiate and initialise the class.
@@ -228,7 +228,7 @@ class Images:
         try:
             results = sparql.query().convert()
         except Exception as e:
-            return e
+            raise e
         # Save to CSV
         self._saveSPARQLResultToCSV(results)
         
