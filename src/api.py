@@ -46,6 +46,34 @@ def sparql():
     
     return Response('{"status": "OK"}', mimetype='application/json')
 
+def createSparqlResponse(query, request, results):
+    def getDataTypeForValue(value):
+        if isinstance(value, int):
+            return "http://www.w3.org/2001/XMLSchema#integer"
+        return "http://www.w3.org/2001/XMLSchema#string"
+    
+    p = parser()
+    parsedQuery = p.parseQuery(query)
+
+    response = {}
+    response['head'] = {
+        "vars": parsedQuery['select']
+    }
+    bindings = []
+
+    for result in results:
+        row = {}
+        for key, variable in request['select'].items():
+            if variable in parsedQuery['select']:
+                row[variable] = {
+                    "value": result[key],
+                    "type": "literal",
+                    "datatype": getDataTypeForValue(result[key])
+                }
+        bindings.append(row)
+    response['results'] = {'bindings': bindings}
+    return response
+
 def error(message):
   """
   Generate a JSON error object
@@ -122,7 +150,8 @@ def processSparqlQuery(query):
   """
   request = extractRequestFromSparqlQuery(query)
   result = queryWithRequest(request)
-  return result
+  response = createSparqlResponse(query, request, result)
+  return response
 
 def queryWithRequest(request):
     if not 'queryString' in request:
