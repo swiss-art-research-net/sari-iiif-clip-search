@@ -7,9 +7,10 @@ def run():
     clipQuery=Query(
         dataDir=dataDir
     )
-    queryStrings = ["A mountain", "A lake", "People"]
+    queryStrings = ["A mountain", "A lake", "People", "A car", "A disaster", "Airplane"]
     for queryString in queryStrings:
-        print(queryString, clipQuery.query(queryString, numResults=3))
+        results = clipQuery.query(queryString, numResults=3)
+        print(queryString, [d['url'] + '/full/1000,/0/default.jpg' for d in results])
 
 if __name__ == "__main__":
     run()
