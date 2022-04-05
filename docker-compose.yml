@@ -2,7 +2,7 @@ version: "3"
 services:
   jobs:
     container_name: ${PROJECT_NAME}_service
-    build: ./service
+    build: .
     volumes:
       - ./data:/workdir/data
       - ./precomputedFeatures:/precomputedFeatures
