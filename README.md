@@ -42,18 +42,17 @@ Returns:
 ```json
 [
     {
-        score: 0.2553620934486389,
+        score: "0.2553620934486389",
         imageId: "3ce3913927093bdad714f65ad44c542796268206",
         url: "https://www.e-manuscripta.ch/zuzneb/i3f/v20/1582208",
         link: "https://www.e-manuscripta.ch/zuzneb/i3f/v20/1582208/full/1000,/0/default.jpg"
     },
     {
-        score: 0.2505139708518982,
+        score: "0.2505139708518982",
         imageId: "b75557df7b30f9f16e5506b8e45ccba9837b1bd0",
         url: "https://www.e-manuscripta.ch/zuzneb/i3f/v20/1582203",
         link: "https://www.e-manuscripta.ch/zuzneb/i3f/v20/1582203/full/1000,/0/default.jpg"
-    },
-    ...
+    }
 ]
 ```
 
@@ -65,19 +64,19 @@ Returns
 ```json
 [
     {
-        score: 0.3113684058189392,
+        score: "0.3113684058189392",
         imageId: "2026e9190cfe333b95623f11bf5f4d0218b7dbfd",
         url: "https://bso-iiif.swissartresearch.net/iiif/2/nb-480729",
         link: "https://bso-iiif.swissartresearch.net/iiif/2/nb-480729/full/1000,/0/default.jpg"
     },
     {
-        score: 0.3020486831665039,
+        score: "0.3020486831665039",
         imageId: "0894f033eb159ddd2e3b076745c9ebe629583362",
         url: "https://bso-iiif.swissartresearch.net/iiif/2/nb-479221",
         link: "https://bso-iiif.swissartresearch.net/iiif/2/nb-479221/full/1000,/0/default.jpg"
     },
     {
-        score: 0.2966747283935547,
+        score: "0.2966747283935542",
         imageId: "74417f49133656ef9277089f9b1f924e693a6d92",
         url: "https://bso-iiif.swissartresearch.net/iiif/2/nb-479256",
         link: "https://bso-iiif.swissartresearch.net/iiif/2/nb-479256/full/1000,/0/default.jpg"
@@ -103,23 +102,23 @@ The example query below illustrates the supported features:
 ```
 ## Extract image features
 
-To use the CLIP Search with a custom collection of images, the `build.py` script found in `src` can be used.
+To use the CLIP Search with a custom collection of images, the `build.py` script found in `./src` can be used.
 The script operates either in SPARQL mode or in CSV mode.
 
 In SPARQL mode a SPARQL query and a SPARQL endpoint are required. The query needs to retrieve the IIIF image URLs 
-bound to the variable ?iiif_url. If another variable is used, it can be provided via the --iiifColumn option.
+bound to the variable ?iiif_url. If another variable is used, it can be provided via the `--iiifColumn` option.
 
-In CSV mode the path to a CSV file is required. The CSV file needs to contain the IIIF image URLs in a column named iiif_url.
-If another column is used, it can be provided via the --iiifColumn option.
+In CSV mode the path to a CSV file is required. The CSV file needs to contain the IIIF image URLs in a column named `iiif_url`.
+If another column is used, it can be provided via the `--iiifColumn` option.
 
-For both modes of operation the path to a directory needs to be specified via the --dataDir option. The script will operate in
+For both modes of operation the path to a directory needs to be specified via the `--dataDir` option. The script will operate in
 this directory. A subdirectory named 'images' will be created and the images will be downloaded to this directory. The
 features will be computed and stored in a subdirectory named 'features'.
 
 
 For publishing the extracted features, the downloaded images can be deleted from the directory when the script has finished. 
-The final features will be stored in the files features.npy and imageIds.csv. For publishing all other files in the features
-directory can be deleted. Retaining them locally can however be useful to speed up later processing.
+The final features will be stored in the files `features.npy` and `imageIds.csv`. When deploying it for querying, all other files in the features
+directory can be deleted (the script retains them locally can to speed up later processing)
 
 ### SPARQL mode example
 
