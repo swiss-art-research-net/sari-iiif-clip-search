@@ -1,12 +1,96 @@
-# SARI IIIF Clip Search
+# SARI IIIF CLIP Search
 
 ## About
 
 A library to index images based on IIIF URLs and enable semantic free text search based on [CLIP](https://github.com/openai/CLIP).
 
-## Usage
+## Query Service
 
-### Extract image features
+CLIP Search can be used as a service that can be queried through a simple REST API or through (pseudo) SPARQL.
+The repository contains a Docker Compose configuration to run it as a service.
+
+Make a copy of the provided `.env.example` file
+
+```bash
+cp .env.example .env
+```
+
+Adjust the values in your `.env` file as required. The `CLIP_DATA_DIRECTORY` should point to a directory containing the extracted CLIP features. You can either use one of those provided in `precomputedFeatures` or you can extract your own using the provided `build.py` script.
+
+Run the service using `docker-compose up -d`. The service is now reachable at `http://localhost:5000` (using the default port). Note that the service takes some time to start up as it initialises the CLIP model.
+
+### REST API
+
+The REST API is accessible at `/query`, e.g. `http://localhost:5000/query`. 
+
+To query the search with a string, use the `str` parameter.
+
+e.g. `http://localhost:5000/query?str=Airplane`
+
+Returns:
+```json
+[
+    {
+        score: 0.2553620934486389,
+        imageId: "3ce3913927093bdad714f65ad44c542796268206",
+        url: "https://www.e-manuscripta.ch/zuzneb/i3f/v20/1582208",
+        link: "https://www.e-manuscripta.ch/zuzneb/i3f/v20/1582208/full/1000,/0/default.jpg"
+    },
+    {
+        score: 0.2505139708518982,
+        imageId: "b75557df7b30f9f16e5506b8e45ccba9837b1bd0",
+        url: "https://www.e-manuscripta.ch/zuzneb/i3f/v20/1582203",
+        link: "https://www.e-manuscripta.ch/zuzneb/i3f/v20/1582203/full/1000,/0/default.jpg"
+    },
+    ...
+]
+```
+
+Optional supported parameters are `minScore` to specify the minimum score the results should have, and `limit` to specify the maximum results to return.
+
+e.g. `http://localhost:5000/query?str=a%20group%20of%20people&minScore=0.29&limit=3`
+
+Returns
+```json
+[
+    {
+        score: 0.3113684058189392,
+        imageId: "2026e9190cfe333b95623f11bf5f4d0218b7dbfd",
+        url: "https://bso-iiif.swissartresearch.net/iiif/2/nb-480729",
+        link: "https://bso-iiif.swissartresearch.net/iiif/2/nb-480729/full/1000,/0/default.jpg"
+    },
+    {
+        score: 0.3020486831665039,
+        imageId: "0894f033eb159ddd2e3b076745c9ebe629583362",
+        url: "https://bso-iiif.swissartresearch.net/iiif/2/nb-479221",
+        link: "https://bso-iiif.swissartresearch.net/iiif/2/nb-479221/full/1000,/0/default.jpg"
+    },
+    {
+        score: 0.2966747283935547,
+        imageId: "74417f49133656ef9277089f9b1f924e693a6d92",
+        url: "https://bso-iiif.swissartresearch.net/iiif/2/nb-479256",
+        link: "https://bso-iiif.swissartresearch.net/iiif/2/nb-479256/full/1000,/0/default.jpg"
+    }
+]
+```
+
+### SPARQL Endpoint
+
+The service includes a PSARQL (pseudo SPARQL) endpoint for querying it within SPARQL environments. It lends itself to integrating it via a SERVICE clause.
+
+The example query below illustrates the supported features:
+
+```SPARQL
+        PREFIX  clip: <https://service.swissartresearch.net/clip/>
+        SELECT ?iiif ?score WHERE { 
+            ?request a clip:Request ;
+                clip:queryString "A mountain lake" ;
+                clip:minScore "0.2" ;
+                clip:score ?score ;
+                clip:iiifUrl ?iiif .
+        } LIMIT 10
+```
+## Extract image features
 
 To use the CLIP Search with a custom collection of images, the `build.py` script found in `src` can be used.
 The script operates either in SPARQL mode or in CSV mode.
@@ -26,7 +110,7 @@ For publishing the extracted features, the downloaded images can be deleted from
 The final features will be stored in the files features.npy and imageIds.csv. For publishing all other files in the features
 directory can be deleted. Retaining them locally can however be useful to speed up later processing.
 
-#### SPARQL mode example
+### SPARQL mode example
 
 ```bash
 python src/build.py \
@@ -36,7 +120,7 @@ python src/build.py \
     --dataDir ./myFeatures
 ```
 
-#### CSV mode example
+### CSV mode example
 
 ```bash
 python src/build.py \
@@ -45,7 +129,7 @@ python src/build.py \
     --dataDir ./myFeatures
 ```
 
-#### Parameters
+### Parameters
 
 ```
     --mode: The mode of operation. Either SPARQL or CSV.
@@ -56,6 +140,61 @@ python src/build.py \
     --iiifColumn: The name of the column containing the IIIF image URLs. Optional, defaults to iiif_url.
     --threads: The number of threads to use for downloading images. Optional, defaults to 16.
     --batchSize: The number of images to process in one batch. Optional, defaults to 64.
+```
+
+## REST API
+
+```swagger
+swagger: "2.0"
+info:
+  description: "This is a sample server Petstore server.  You can find out more about     Swagger at [http://swagger.io](http://swagger.io) or on [irc.freenode.net, #swagger](http://swagger.io/irc/).      For this sample, you can use the api key `special-key` to test the authorization     filters."
+  version: "1.0.0"
+  title: "IIIF CLIP Search"
+host: "petstore.swagger.io"
+schemes:
+- "http"
+paths:
+  /query:
+    get:
+      summary: "Query the CLIP search"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "str"
+        in: "query"
+        description: "A string to query the index with"
+        required: true
+        type: "string"
+      - name: "minSore"
+        in: "query"
+        description: "The minimum score of the returned results"
+        type: "number"
+        required: false
+        default: 0.2
+      - name: "limit"
+        in: "query"
+        description: "The maximum number of results to return"
+        default: 10
+        required: false
+        type: "integer"
+        
+      responses:
+        "200":
+          description: "successful operation"
+          schema:
+            type: "array"
+            items:
+              $ref: "#/definitions/queryResponse"
+        "500":
+          description: "An error occured"
+definitions:
+  queryResponse:
+    type: "object"
+    properties:
+      url:
+        type: "string"
+      score:
+        type: "integer"
 ```
 
 ## Acknowledgements
