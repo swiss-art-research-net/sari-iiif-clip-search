@@ -184,7 +184,7 @@ def queryWithRequest(request):
 def queryWithString(queryString, *, minScore=DEFAULT_MINSCORE, numResults=DEFAULT_NUMRESULTS):
     results = clipQuery.query(queryString, numResults=numResults, minScore=minScore)
     for result in results:
-        result['link'] = result['url'] + '/full/1000,/0/default.jpg'
+        result['link'] = result['url'] + '/full/640,/0/default.jpg'
     return results
 
 if __name__ == "__main__":
