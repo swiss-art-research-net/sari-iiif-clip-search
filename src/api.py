@@ -50,11 +50,19 @@ def sparql():
     return Response('{"status": "OK"}', mimetype='application/json')
 
 def createSparqlResponse(query, request, results):
+
     def getDataTypeForValue(value):
         if isinstance(value, int):
             return "http://www.w3.org/2001/XMLSchema#integer"
+        if isinstance(value, float):
+            return "http://www.w3.org/2001/XMLSchema#float"
         return "http://www.w3.org/2001/XMLSchema#string"
     
+    def getTypeForField(key):
+        if 'url' in key:
+            return 'uri'
+        return 'literal'
+
     p = parser()
     parsedQuery = p.parseQuery(query)
 
@@ -70,7 +78,7 @@ def createSparqlResponse(query, request, results):
             if variable in parsedQuery['select']:
                 row[variable] = {
                     "value": result[key],
-                    "type": "literal",
+                    "type": getTypeForField(key),
                     "datatype": getDataTypeForValue(result[key])
                 }
         bindings.append(row)
