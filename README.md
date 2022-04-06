@@ -1,6 +1,8 @@
 # SARI IIIF CLIP Search
 
-  * [About](#about)
+A service to index images based on IIIF URLs and enable semantic free text search based on [CLIP](https://github.com/openai/CLIP).
+
+
   * [Query Service](#query-service)
     + [REST API](#rest-api)
     + [SPARQL Endpoint](#sparql-endpoint)
@@ -10,11 +12,7 @@
     + [Parameters](#parameters)
   * [REST API Swagger](#rest-api-swagger)
   * [Acknowledgements](#acknowledgements)
-
-## About
-
-A service to index images based on IIIF URLs and enable semantic free text search based on [CLIP](https://github.com/openai/CLIP).
-
+  
 ## Query Service
 
 CLIP Search can be used as a service that can be queried through a simple REST API or through (pseudo) SPARQL.
