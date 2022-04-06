@@ -17,6 +17,9 @@ clipQuery=Query(
     dataDir=dataDir
 )
 
+DEFAULT_MINSCORE=0.2
+DEFAULT_NUMRESULTS=100
+
 @app.route('/')
 def index():
     return 'Server Works!'
@@ -28,11 +31,11 @@ def query():
         if 'limit' in request.values:
             limit = int(request.values['limit'])
         else:
-            limit = 10
+            limit = DEFAULT_NUMRESULTS
         if 'minScore' in request.values:
             minScore = float(request.values['minScore'])
         else:
-            minScore = 0.2
+            minScore = DEFAULT_MINSCORE
         result = queryWithString(queryString, minScore=minScore, numResults=limit)
         return Response(json.dumps(result), mimetype='application/json')
     return Response('{"status": "OK"}', mimetype='application/json')
@@ -138,7 +141,7 @@ def extractRequestFromSparqlQuery(query):
             elif getValueWithoutPrefix(triple['p']['value']) == 'score' and triple['o']['type'] == Variable:
                 request = addSelect(request, 'score', triple['o']['value'])
 
-    if 'limitOffset' in parsedQuery:
+    if 'limitOffset' in parsedQuery and parsedQuery['limitOffset']:
         if 'limit' in parsedQuery['limitOffset']:
             request = addOption(request, 'numResults', int(parsedQuery['limitOffset']['limit']))
 
@@ -160,11 +163,11 @@ def queryWithRequest(request):
         if 'minScore' in request['options']:
             minScore = float(request['options']['minScore'])
         else:
-            minScore = 0.2
+            minScore = DEFAULT_MINSCORE
         if 'numResults' in request['options']:
             numResults = int(request['options']['numResults'])
         else:
-            numResults = 10
+            numResults = DEFAULT_NUMRESULTS
     results = clipQuery.query(request['queryString'], minScore=minScore, numResults=numResults)
     filteredResults = []
     if 'select' in request:
@@ -178,7 +181,7 @@ def queryWithRequest(request):
     else:
         return results
 
-def queryWithString(queryString, *, minScore=0.2, numResults=10):
+def queryWithString(queryString, *, minScore=DEFAULT_MINSCORE, numResults=DEFAULT_NUMRESULTS):
     results = clipQuery.query(queryString, numResults=numResults, minScore=minScore)
     for result in results:
         result['link'] = result['url'] + '/full/1000,/0/default.jpg'
