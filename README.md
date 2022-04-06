@@ -42,13 +42,13 @@ Returns:
 ```json
 [
     {
-        "score": "0.2553620934486389",
+        "score": 0.2553620934486389,
         "imageId": "3ce3913927093bdad714f65ad44c542796268206",
         "url": "https://www.e-manuscripta.ch/zuzneb/i3f/v20/1582208",
         "link": "https://www.e-manuscripta.ch/zuzneb/i3f/v20/1582208/full/1000,/0/default.jpg"
     },
     {
-        "score": "0.2505139708518982",
+        "score": 0.2505139708518982,
         "imageId": "b75557df7b30f9f16e5506b8e45ccba9837b1bd0",
         "url": "https://www.e-manuscripta.ch/zuzneb/i3f/v20/1582203",
         "link": "https://www.e-manuscripta.ch/zuzneb/i3f/v20/1582203/full/1000,/0/default.jpg"
@@ -64,19 +64,19 @@ Returns
 ```json
 [
     {
-        "score": "0.3113684058189392",
+        "score": 0.3113684058189392,
         "imageId": "2026e9190cfe333b95623f11bf5f4d0218b7dbfd",
         "url": "https://bso-iiif.swissartresearch.net/iiif/2/nb-480729",
         "link": "https://bso-iiif.swissartresearch.net/iiif/2/nb-480729/full/1000,/0/default.jpg"
     },
     {
-        "score": "0.3020486831665039",
+        "score": 0.3020486831665039,
         "imageId": "0894f033eb159ddd2e3b076745c9ebe629583362",
         "url": "https://bso-iiif.swissartresearch.net/iiif/2/nb-479221",
         "link": "https://bso-iiif.swissartresearch.net/iiif/2/nb-479221/full/1000,/0/default.jpg"
     },
     {
-        "score": "0.2966747283935542",
+        "score": 0.2966747283935542,
         "imageId": "74417f49133656ef9277089f9b1f924e693a6d92",
         "url": "https://bso-iiif.swissartresearch.net/iiif/2/nb-479256",
         "link": "https://bso-iiif.swissartresearch.net/iiif/2/nb-479256/full/1000,/0/default.jpg"
