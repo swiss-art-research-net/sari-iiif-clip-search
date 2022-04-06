@@ -56,7 +56,7 @@ Returns:
 ]
 ```
 
-Optional supported parameters are `minScore` to specify the minimum score the results should have, and `limit` to specify the maximum results to return.
+Optional supported parameters are `minScore` to specify the minimum score the results should have, and `limit` to specify the maximum number of results to return.
 
 e.g. `http://localhost:5000/query?str=a%20group%20of%20people&minScore=0.29&limit=3`
 
@@ -105,18 +105,18 @@ The example query below illustrates the supported features:
 To use the CLIP Search with a custom collection of images, the `build.py` script found in `./src` can be used.
 The script operates either in SPARQL mode or in CSV mode.
 
-In SPARQL mode a SPARQL query and a SPARQL endpoint are required. The query needs to retrieve the IIIF image URLs 
-bound to the variable ?iiif_url. If another variable is used, it can be provided via the `--iiifColumn` option.
+In SPARQL mode, a SPARQL query and a SPARQL endpoint are required. The query needs to retrieve the IIIF image URLs 
+bound to the variable `?iiif_url`. If another variable is used, it can be provided via the `--iiifColumn` option.
 
 In CSV mode the path to a CSV file is required. The CSV file needs to contain the IIIF image URLs in a column named `iiif_url`.
 If another column is used, it can be provided via the `--iiifColumn` option.
 
 For both modes of operation the path to a directory needs to be specified via the `--dataDir` option. The script will operate in
 this directory. A subdirectory named 'images' will be created and the images will be downloaded to this directory. The
-features will be computed and stored in a subdirectory named 'features'.
+features will be computed and stored in a subdirectory named `features`.
 
 
-For publishing the extracted features, the downloaded images can be deleted from the directory when the script has finished. 
+For deployment, the downloaded images can be deleted from the directory when the script has finished. 
 The final features will be stored in the files `features.npy` and `imageIds.csv`. When deploying it for querying, all other files in the features
 directory can be deleted (the script retains them locally can to speed up later processing)
 
@@ -157,10 +157,8 @@ python src/build.py \
 ```swagger
 swagger: "2.0"
 info:
-  description: "This is a sample server Petstore server.  You can find out more about     Swagger at [http://swagger.io](http://swagger.io) or on [irc.freenode.net, #swagger](http://swagger.io/irc/).      For this sample, you can use the api key `special-key` to test the authorization     filters."
   version: "1.0.0"
   title: "IIIF CLIP Search"
-host: "petstore.swagger.io"
 schemes:
 - "http"
 paths:
