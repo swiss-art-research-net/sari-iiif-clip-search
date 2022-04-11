@@ -127,6 +127,8 @@ def extractRequestFromSparqlQuery(query):
         return request
 
     def getValueWithoutPrefix(value):
+        if value.startswith("pname_pname_"):
+            return value[45:-2]
         prefix = 'https://service.swissartresearch.net/clip/'
         return value[len(prefix):]
 
@@ -137,7 +139,6 @@ def extractRequestFromSparqlQuery(query):
             request['variable'] = triple['s']['value']
             # Process only first request encountered
             break
-
     for triple in parsedQuery['where']:
         if triple['s']['value'] == request['variable']:
             if getValueWithoutPrefix(triple['p']['value']) == 'queryString' and triple['o']['type'] == Literal:
