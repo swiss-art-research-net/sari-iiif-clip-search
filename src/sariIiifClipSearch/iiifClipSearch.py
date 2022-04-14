@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import torch
 import urllib.request
+import requests
 from clip import clip
 from hashlib import blake2b
 from pathlib import Path
@@ -239,6 +240,9 @@ class Query:
     This class can be used to query the previously processed image using CLIP
     """
 
+    MODE_TEXT = 1
+    MODE_URL = 2
+
     def __init__(self, *, dataDir, imageCSV=None, iiifColumn="iiif_url"):
         """
         Initialize the query object.
@@ -266,23 +270,37 @@ class Query:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
 
-    def query(self, queryString, *, numResults=5, minScore=0.2):
+    def query(self, queryString, *, mode=MODE_TEXT, numResults=5, minScore=0.2):
         """
         Query the images using the query string.
         params:
             queryString: The query string to be used for the query.
             numResults: The number of results to be returned. Default is 5.
         """
-        with torch.no_grad():
-            # Encode and normalize the description using CLIP
-            textEncoded = self.model.encode_text(clip.tokenize(queryString).to(self.device))
-            textEncoded /= textEncoded.norm(dim=-1, keepdim=True)
+        if mode == self.MODE_TEXT:
+            with torch.no_grad():
+                # Encode and normalize the description using CLIP
+                textEncoded = self.model.encode_text(clip.tokenize(queryString).to(self.device))
+                textEncoded /= textEncoded.norm(dim=-1, keepdim=True)
 
-        # Retrieve the description vector and the photo vectors
-        textFeatures = textEncoded.cpu().numpy()
+            # Retrieve the description vector and the photo vectors
+            textFeatures = textEncoded.cpu().numpy()
 
-        # Compute the similarity between the descrption and each photo using the Cosine similarity
-        similarities = list((textFeatures @ self.imageFeatures.T).squeeze(0))
+            # Compute the similarity between the descrption and each photo using the Cosine similarity
+            similarities = list((textFeatures @ self.imageFeatures.T).squeeze(0))
+        elif mode == self.MODE_URL:
+            # Load the image from the URL into a PIL image
+            images = [Image.open(requests.get(queryString, stream=True).raw)]
+            imagesPreprocessed = torch.stack([self.preprocess(image) for image in images]).to(self.device)
+
+            with torch.no_grad():
+                # Encode the photos batch to compute the feature vectors and normalize them
+                photoFeatures = self.model.encode_image(imagesPreprocessed)
+                photoFeatures /= photoFeatures.norm(dim=-1, keepdim=True)
+            
+            photoFeatures = photoFeatures.cpu().numpy()
+
+            similarities = list((photoFeatures @ self.imageFeatures.T).squeeze(0))
 
         # Sort the images by their similarity score
         bestImages = sorted(zip(similarities, range(self.imageFeatures.shape[0])), key=lambda x: x[0], reverse=True)

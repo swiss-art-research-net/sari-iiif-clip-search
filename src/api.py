@@ -26,17 +26,22 @@ def index():
 
 @app.route('/query', methods=['GET', 'POST'])
 def query():
+    if 'limit' in request.values:
+        limit = int(request.values['limit'])
+    else:
+        limit = DEFAULT_NUMRESULTS
+    if 'minScore' in request.values:
+        minScore = float(request.values['minScore'])
+    else:
+        minScore = DEFAULT_MINSCORE
+
     if 'str' in request.values:
         queryString = request.values['str']
-        if 'limit' in request.values:
-            limit = int(request.values['limit'])
-        else:
-            limit = DEFAULT_NUMRESULTS
-        if 'minScore' in request.values:
-            minScore = float(request.values['minScore'])
-        else:
-            minScore = DEFAULT_MINSCORE
         result = queryWithString(queryString, minScore=minScore, numResults=limit)
+        return Response(json.dumps(result), mimetype='application/json')
+    elif 'url' in request.values:
+        queryUrl = request.values['url']
+        result = queryWithUrl(queryUrl, minScore=minScore, numResults=limit)
         return Response(json.dumps(result), mimetype='application/json')
     return Response('{"status": "OK"}', mimetype='application/json')
 
@@ -192,6 +197,12 @@ def queryWithRequest(request):
 
 def queryWithString(queryString, *, minScore=DEFAULT_MINSCORE, numResults=DEFAULT_NUMRESULTS):
     results = clipQuery.query(queryString, numResults=numResults, minScore=minScore)
+    for result in results:
+        result['link'] = result['url'] + '/full/640,/0/default.jpg'
+    return results
+
+def queryWithUrl(queryUrl, *, minScore=DEFAULT_MINSCORE, numResults=DEFAULT_NUMRESULTS):
+    results = clipQuery.query(queryUrl, mode=Query.MODE_URL, numResults=numResults, minScore=minScore)
     for result in results:
         result['link'] = result['url'] + '/full/640,/0/default.jpg'
     return results
