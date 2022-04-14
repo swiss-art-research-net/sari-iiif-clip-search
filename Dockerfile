@@ -5,7 +5,7 @@ COPY ./requirements.txt /workdir/
 WORKDIR /workdir
 RUN pip install -r requirements.txt
 
-RUN pip install flask waitress sari-sparql-parser==0.0.6
+RUN pip install flask requests waitress sari-sparql-parser==0.0.6
 
 ADD ./precomputedFeatures /precomputedFeatures
 ADD ./src /workdir/src

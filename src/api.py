@@ -148,6 +148,8 @@ def extractRequestFromSparqlQuery(query):
         if triple['s']['value'] == request['variable']:
             if getValueWithoutPrefix(triple['p']['value']) == 'queryString' and triple['o']['type'] == Literal:
                 request['queryString'] = triple['o']['value']
+            elif getValueWithoutPrefix(triple['p']['value']) == 'queryURL' and triple['o']['type'] == URIRef:
+                request['queryURL'] = triple['o']['value']
             elif getValueWithoutPrefix(triple['p']['value']) == 'minScore' and triple['o']['type'] == Literal:
                 request = addOption(request, 'minScore', float(triple['o']['value']))
             elif getValueWithoutPrefix(triple['p']['value']) == 'iiifUrl' and triple['o']['type'] == Variable:
@@ -171,7 +173,7 @@ def processSparqlQuery(query):
   return response
 
 def queryWithRequest(request):
-    if not 'queryString' in request:
+    if not 'queryString' in request and not 'queryURL' in request:
         return error('No query string provided')
     if 'options' in request:
         if 'minScore' in request['options']:
@@ -182,7 +184,10 @@ def queryWithRequest(request):
             numResults = int(request['options']['numResults'])
         else:
             numResults = DEFAULT_NUMRESULTS
-    results = clipQuery.query(request['queryString'], minScore=minScore, numResults=numResults)
+    if 'queryString' in request:
+        results = clipQuery.query(request['queryString'], minScore=minScore, numResults=numResults)
+    elif 'queryURL' in request:
+        results = clipQuery.query(request['queryURL'], mode=Query.MODE_URL, minScore=minScore, numResults=numResults)
     filteredResults = []
     if 'select' in request:
         for result in results:
