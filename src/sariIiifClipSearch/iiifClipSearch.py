@@ -242,6 +242,7 @@ class Query:
 
     MODE_TEXT = 1
     MODE_URL = 2
+    MODE_IMAGE = 3
 
     def __init__(self, *, dataDir, imageCSV=None, iiifColumn="iiif_url"):
         """
@@ -270,17 +271,17 @@ class Query:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
 
-    def query(self, queryString, *, mode=MODE_TEXT, numResults=5, minScore=0.2):
+    def query(self, queryInput, *, mode=MODE_TEXT, numResults=5, minScore=0.2):
         """
         Query the images using the query string.
         params:
-            queryString: The query string to be used for the query.
+            queryInput: The query string to be used for the query.
             numResults: The number of results to be returned. Default is 5.
         """
         if mode == self.MODE_TEXT:
             with torch.no_grad():
                 # Encode and normalize the description using CLIP
-                textEncoded = self.model.encode_text(clip.tokenize(queryString).to(self.device))
+                textEncoded = self.model.encode_text(clip.tokenize(queryInput).to(self.device))
                 textEncoded /= textEncoded.norm(dim=-1, keepdim=True)
 
             # Retrieve the description vector and the photo vectors
@@ -288,9 +289,14 @@ class Query:
 
             # Compute the similarity between the descrption and each photo using the Cosine similarity
             similarities = list((textFeatures @ self.imageFeatures.T).squeeze(0))
-        elif mode == self.MODE_URL:
-            # Load the image from the URL into a PIL image
-            images = [Image.open(requests.get(queryString, stream=True).raw)]
+        elif mode == self.MODE_URL or mode == self.MODE_IMAGE:
+            if mode == self.MODE_URL:
+                # Load the image from the URL into a PIL image
+                images = [Image.open(requests.get(queryInput, stream=True).raw)]
+            elif mode == self.MODE_IMAGE:
+                # Image is passed as PIL image in queryInput
+                images = [queryInput]
+
             imagesPreprocessed = torch.stack([self.preprocess(image) for image in images]).to(self.device)
 
             with torch.no_grad():
