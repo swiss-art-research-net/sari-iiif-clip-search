@@ -13,10 +13,8 @@ ADD ./src /workdir/src
 # Run once to download model to image
 RUN python src/test.py
 
-ENV FLASK_ENV=development
 ENV FLASK_APP=/workdir/src/api.py
 
 VOLUME ["/workdir/data"]
 
-# Run idling
-ENTRYPOINT flask run --host=0.0.0.0
+CMD ["python", "src/api.py"]
