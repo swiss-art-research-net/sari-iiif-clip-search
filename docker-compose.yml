@@ -5,6 +5,12 @@ services:
     image: swissartresearx/sari-iiif-clip-search:latest
     build: .
     platform: linux/amd64
+    healthcheck:
+      test: wget -q http://0.0.0.0:5000 || exit 1
+      interval: 5m
+      timeout: 10s
+      retries: 2
+      start_period: 40s
     environment:
       - CLIP_DATA_DIRECTORY=${CLIP_DATA_DIRECTORY}
     ports:
