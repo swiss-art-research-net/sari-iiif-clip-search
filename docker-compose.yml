@@ -4,6 +4,7 @@ services:
     container_name: ${PROJECT_NAME}_service
     image: swissartresearx/sari-iiif-clip-search:latest
     build: .
+    platform: linux/amd64
     environment:
       - CLIP_DATA_DIRECTORY=${CLIP_DATA_DIRECTORY}
     ports:
