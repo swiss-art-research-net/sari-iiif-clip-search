@@ -83,7 +83,6 @@ def build(options):
             batchSize=options['batchSize']
         )
     elif mode == Images.MODE_CSV:
-        csvFile = options['csvFile']
 
         imageProcessor = Images(
             mode=mode,
@@ -103,6 +102,9 @@ def build(options):
 
     print("Downloading images")
     imageProcessor.downloadImages()
+
+    if mode == Images.MODE_CSV:
+        imageProcessor.addIdentifiersToCsv()
 
     print("Processing images")
     imageProcessor.processImages()

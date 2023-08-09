@@ -142,6 +142,23 @@ class Images:
                 row[IDENTIFIERCOLUMN] = self._customHash(row[self.iiifColumn])
                 csvWriter.writerow(row)
 
+    def addIdentifiersToCsv(self):
+        """
+        Populate a column that contains the local identifiers of the images to the csv file.
+        """
+        rows = []
+        with open(self.imageCSV, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                row[IDENTIFIERCOLUMN] = self._customHash(row[self.iiifColumn])
+                rows.append(row)
+        fieldnames = rows[0].keys()
+        with open(self.imageCSV, 'w') as f:
+            csvWriter = csv.DictWriter(f, fieldnames=fieldnames)
+            csvWriter.writeheader()
+            for row in rows:
+                csvWriter.writerow(row)
+    
     def downloadImages(self):
         """
         Download the images from the CSV file.
