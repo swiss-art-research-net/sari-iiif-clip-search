@@ -152,8 +152,7 @@ python src/build.py \
 
 ## REST API Swagger
 
-```swagger
-swagger: "2.0"
+```swaggerswagger: "2.0"
 info:
   version: "1.0.0"
   title: "IIIF CLIP Search"
@@ -169,7 +168,17 @@ paths:
       - name: "str"
         in: "query"
         description: "A string to query the index with"
-        required: true
+        required: false
+        type: "string"
+      - name: "url"
+        in: "query"
+        description: "An URL of an image to query the index with"
+        required: false
+        type: "string"
+      - name: "image"
+        in: "query"
+        description: "A base64 encoded image to query the index with"
+        required: false
         type: "string"
       - name: "minSore"
         in: "query"
@@ -193,14 +202,24 @@ paths:
               $ref: "#/definitions/queryResponse"
         "500":
           description: "An error occured"
+          
 definitions:
   queryResponse:
     type: "object"
     properties:
+      "score":
+        type: "number"
+        format: "float"
+        minimum: 0
+        maximum: 1
+      "imageId":
+        type: "string"
       "url":
         type: "string"
       "score":
         type: "integer"
+      "link":
+        type: "string"
 ```
 
 ## Acknowledgements
