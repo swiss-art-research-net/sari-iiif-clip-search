@@ -260,6 +260,7 @@ class Query:
     MODE_TEXT = 1
     MODE_URL = 2
     MODE_IMAGE = 3
+    MODE_INDEXED = 4
 
     def __init__(self, *, dataDir, imageCSV=None, iiifColumn="iiif_url"):
         """
