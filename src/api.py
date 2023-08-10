@@ -51,6 +51,10 @@ def query():
         queryImage = decodeImageFromUrlString(request.values['image'])
         result = queryWithImage(queryImage, minScore=minScore, numResults=limit)
         return Response(json.dumps(result), mimetype='application/json')
+    elif 'indexed' in request.values:
+        queryIndexed = request.values['indexed']
+        result = queryWithIndexed(queryIndexed, minScore=minScore, numResults=limit)
+        return Response(json.dumps(result), mimetype='application/json')
     return Response('{"status": "OK"}', mimetype='application/json')
 
 @app.route('/sparql', methods=['GET', 'POST'])
@@ -226,6 +230,12 @@ def queryWithRequest(request):
 
 def queryWithImage(image, *, minScore=DEFAULT_MINSCORE, numResults=DEFAULT_NUMRESULTS):
     results = clipQuery.query(image, mode=Query.MODE_IMAGE, numResults=numResults, minScore=minScore)
+    for result in results:
+        result['link'] = result['url'] + '/full/640,/0/default.jpg'
+    return results
+
+def queryWithIndexed(url, *, minScore=DEFAULT_MINSCORE, numResults=DEFAULT_NUMRESULTS):
+    results = clipQuery.query(url, mode=Query.MODE_INDEXED, numResults=numResults, minScore=minScore)
     for result in results:
         result['link'] = result['url'] + '/full/640,/0/default.jpg'
     return results

@@ -324,6 +324,18 @@ class Query:
             photoFeatures = photoFeatures.cpu().numpy()
 
             similarities = list((photoFeatures @ self.imageFeatures.T).squeeze(0))
+        elif mode == self.MODE_INDEXED:
+            # Find the corresponding identifier based on the iiif_url in imageData
+            identifier = self.imageData[self.imageData[self.iiifColumn] == queryInput][IDENTIFIERCOLUMN].iloc[0]
+
+            # Find the index of the image with the corresponding identifier in imageFeatures
+            imageIndex = self.imageIDs[self.imageIDs['image_id'] == identifier].index[0]
+
+            # Get the feature vector for the image
+            imageFeatures = self.imageFeatures[imageIndex]
+
+            # Compute the similarity between the description and each photo using the Cosine similarity
+            similarities = list((imageFeatures @ self.imageFeatures.T))
 
         # Sort the images by their similarity score
         bestImages = sorted(zip(similarities, range(self.imageFeatures.shape[0])), key=lambda x: x[0], reverse=True)
