@@ -111,6 +111,7 @@ class Images:
     def _downloadImage(self, iiifUrl):
         width = 640
         url = iiifUrl + '/full/' + str(width) + ',/0/default.jpg'
+        url = iiifUrl + '/full/!' + str(width) + ',' + str(width) + '/0/default.jpg'
         photoPath = self._getFilePathForImage(iiifUrl)
 
         # Only download a photo if it doesn't exist
