@@ -327,7 +327,11 @@ class Query:
             similarities = list((photoFeatures @ self.imageFeatures.T).squeeze(0))
         elif mode == self.MODE_INDEXED:
             # Find the corresponding identifier based on the iiif_url in imageData
-            identifier = self.imageData[self.imageData[self.iiifColumn] == queryInput][IDENTIFIERCOLUMN].iloc[0]
+            try:
+                identifier = self.imageData[self.imageData[self.iiifColumn] == queryInput][IDENTIFIERCOLUMN].iloc[0]
+            except:
+                # If the identifier cannot be found, return an empty list
+                return []
 
             # Find the index of the image with the corresponding identifier in imageFeatures
             imageIndex = self.imageIDs[self.imageIDs['image_id'] == identifier].index[0]
