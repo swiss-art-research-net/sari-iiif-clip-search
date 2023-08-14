@@ -1,0 +1,24 @@
+PREFIX  urn:  <http://fliqz.com/>
+        PREFIX  org:  <http://example.com/org/>
+        PREFIX  la:   <https://linked.art/ns/terms/>
+        PREFIX  person: <http://example.com/person/>
+        PREFIX  wdt:  <http://www.wikidata.org/prop/direct/>
+        PREFIX  skos: <http://www.w3.org/2004/02/skos/core#>
+        PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+        PREFIX  wd:   <http://www.wikidata.org/entity/>
+        PREFIX  crmdig: <http://www.ics.forth.gr/isl/CRMdig/>
+        PREFIX  crm:  <http://www.cidoc-crm.org/cidoc-crm/>
+        SELECT DISTINCT ?iiif_url ?id
+        WHERE
+          { ?s
+                      crm:P138i_has_representation  ?di .
+            ?di       a                     crm:E36_Visual_Item ;
+                      la:digitally_shown_by  ?do .
+            ?do       a                     crmdig:D1_Digital_Object ;
+                      crm:P1_is_identifed_by  ?id ;
+                      crm:P138i_has_representation  ?thumbnail_gta ;
+                      la:access_point       ?point;
+                      rdfs:label            ?label
+                      BIND(REPLACE(str(?thumbnail_gta), "https://iiif.gta.arch.ethz.ch", "https://iiif1-test.ethz.ch") AS ?thumbnail)
+					  BIND(URI(REPLACE(?thumbnail, "/full/max/0/default.jpg", "")) as ?iiif_url)
+          } ORDER BY ?id
