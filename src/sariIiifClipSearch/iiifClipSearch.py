@@ -327,15 +327,16 @@ class Query:
 
             similarities = list((photoFeatures @ self.imageFeatures.T).squeeze(0))
         elif mode == self.MODE_INDEXED:
-            # Find the corresponding identifier based on the iiif_url in imageData
-            try:
-                identifier = self.imageData[self.imageData[self.iiifColumn] == queryInput][IDENTIFIERCOLUMN].iloc[0]
-            except:
-                # If the identifier cannot be found, return an empty list
-                return []
-
+            # Find the identifier of the image with the corresponding IIIF URL
+            identifier = self.imageData[self.imageData[self.iiifColumn] == queryInput][IDENTIFIERCOLUMN].iloc[0]
+            
             # Find the index of the image with the corresponding identifier in imageFeatures
-            imageIndex = self.imageIDs[self.imageIDs['image_id'] == identifier].index[0]
+            matchingRow = self.imageIDs[self.imageIDs['image_id'] == identifier]
+            if not matchingRow.empty:
+                imageIndex = self.imageIDs[self.imageIDs['image_id'] == identifier].index[0]
+            else:
+                # If the image is not indexed, return an empty array
+                return []
 
             # Get the feature vector for the image
             imageFeatures = self.imageFeatures[imageIndex]
