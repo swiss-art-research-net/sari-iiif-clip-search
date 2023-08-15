@@ -29,6 +29,7 @@ Adjust the values in your `.env` file as required. The `CLIP_DATA_DIRECTORY` sho
 To connect the service to an existing Docker network, create a `docker-compose.override.yml` file and add the following content:
 
 ```yaml
+version: "3"
 services:
   clip-service:
     networks:
