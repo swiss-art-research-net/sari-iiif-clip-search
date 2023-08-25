@@ -13,6 +13,7 @@ try:
   dataDir = os.environ['CLIP_DATA_DIRECTORY']
 except:
   print("CLIP_DATA_DIRECTORY environment variable not set.")
+  import sys
   sys.exit(1)
 
 app = Flask(__name__)
