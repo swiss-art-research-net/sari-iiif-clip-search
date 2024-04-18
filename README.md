@@ -12,6 +12,9 @@ A service to index images based on IIIF URLs and enable semantic free text searc
     + [Parameters](#parameters)
   * [REST API Swagger](#rest-api-swagger)
   * [Acknowledgements](#acknowledgements)
+
+> [!NOTE]
+> The repository utilises [Git LFS](https://git-lfs.com/) for storing large files like embeddings. Ensure Git LFS is installed before cloning to download these files correctly.
   
 ## Query Service
 
