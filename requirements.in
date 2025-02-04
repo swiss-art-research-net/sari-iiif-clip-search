@@ -1,0 +1,15 @@
+# reqs to run src/build.py
+pandas
+torch
+torchvision
+SPARQLWrapper
+numpy~=1.26.4
+requests
+tqdm
+ftfy
+regex
+
+# reqs to run src/api.py
+flask
+waitress
+sari-sparql-parser==0.0.6
