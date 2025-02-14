@@ -5,6 +5,10 @@ services:
     image: swissartresearx/sari-iiif-clip-search:latest
     build: .
     platform: linux/amd64
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
     healthcheck:
       test: wget -q http://0.0.0.0:5000 || exit 1
       interval: 5m
