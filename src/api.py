@@ -3,7 +3,8 @@ import base64
 import json
 import os
 import re
-from flask import Flask, Response, request
+import logging
+from flask import Flask, Response, request, logging as flogging
 from io import BytesIO
 from rdflib.term import Variable, URIRef, Literal
 from PIL import Image
@@ -15,6 +16,21 @@ try:
 except:
   print("CLIP_DATA_DIRECTORY environment variable not set.")
   sys.exit(1)
+
+try:
+    log_file_path = os.environ['CLIP_API_LOG_FILE']
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(message)s',
+        filename=log_file_path
+    )
+except:
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s %(message)s'
+    )
+
+
 
 app = Flask(__name__)
 
@@ -43,14 +59,17 @@ def query():
     if 'str' in request.values:
         queryString = request.values['str']
         result = queryWithString(queryString, minScore=minScore, numResults=limit)
+        app.logger.info(f"Query by string: queryString='{queryString}', minScore={minScore}, numResults={limit}")
         return Response(json.dumps(result), mimetype='application/json')
     elif 'url' in request.values:
         queryUrl = request.values['url']
         result = queryWithUrl(queryUrl, minScore=minScore, numResults=limit)
+        app.logger.info(f"Query by url: queryUrl='{queryUrl}', minScore={minScore}, numResults={limit}")
         return Response(json.dumps(result), mimetype='application/json')
     elif 'image' in request.values:
         queryImage = decodeImageFromUrlString(request.values['image'])
         result = queryWithImage(queryImage, minScore=minScore, numResults=limit)
+        app.logger.info(f"Query by image: queryImage='{queryImage}', minScore={minScore}, numResults={limit}")
         return Response(json.dumps(result), mimetype='application/json')
     return Response('{"status": "OK"}', mimetype='application/json')
 
