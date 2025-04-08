@@ -15,6 +15,38 @@ A service to index images based on IIIF URLs and enable semantic free text searc
 
 > [!NOTE]
 > The repository utilises [Git LFS](https://git-lfs.com/) for storing large files like embeddings. Ensure Git LFS is installed before cloning to download these files correctly.
+
+## Development
+
+### Managing dependencies
+
+For the dev dependencies:
+```
+pip-compile dev-requirements.in requirements.in --output-file=dev-requirements.txt
+```
+
+For the prod dependencies:
+```
+pip-compile requirements.in --output-file=requirements.txt
+```
+
+To install the dev environment from a requirements.txt file: 
+```
+pip-sync requirements.txt
+```
+
+To update a prod dependency (e.g. `torch`):
+```
+pip-compile requirements.in --output-file=requirements.txt --upgrade-package=torch
+```
+
+### Running tests
+
+(After running `pip-sync dev-requirements.txt`)
+
+```
+pytest -s -v
+```
   
 ## Query Service
 

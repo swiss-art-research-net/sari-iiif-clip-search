@@ -3,3 +3,7 @@ notebooks
 *.pyc
 docker-compose.override.yml
 .env
+mr-requirements.in
+mr-requirements.txt
+__pycache__
+
