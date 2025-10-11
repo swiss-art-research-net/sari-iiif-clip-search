@@ -1,6 +1,8 @@
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'clip'))
 
+from retrying import retry
+from retrying import RetryError
 import csv
 import math
 import numpy as np
@@ -107,6 +109,23 @@ class Images:
         h = blake2b(digest_size=20)
         h.update(inputString.encode())
         return h.hexdigest()
+    
+    @retry(wait_random_min=1000, wait_random_max=4000, stop_max_attempt_number=5, wrap_exception=True)
+    def _download_from_iiif(self, iiifUrl, photoPath):
+        try:
+            urllib.request.urlretrieve(iiifUrl, photoPath)
+        # Catch the exception if the download fails for some reason
+        except Exception as e:
+            # If it's an image server error (HTTP 500), retry as per function decorator parameters,
+            # as it might be a temporary issue related to parallel requests
+            if isinstance(e, urllib.error.HTTPError):
+                # Only retry for server errors
+                if e.code == 500:
+                    raise e
+                else:
+                    print(f"Cannot download {iiifUrl} (HTTP Error: {e.code})")
+            else:
+                raise e
 
     def _downloadImage(self, iiifUrl):
         width = 640
@@ -116,11 +135,11 @@ class Images:
         # Only download a photo if it doesn't exist
         if not photoPath.exists():
             try:
-                urllib.request.urlretrieve(url, photoPath)
-            except:
-                # Catch the exception if the download fails for some reason
-                print(f"Cannot download {url}")
-                pass
+                self._download_from_iiif(url, photoPath)
+            # Catch the exception if the download fails for some reason
+            # Give up after the retries are exhausted
+            except RetryError as e:
+                print(f"Error downloading {url}: retries exhausted")
 
     def _getFilePathForImage(self, iiifUrl):
         photoId = self._customHash(iiifUrl)
