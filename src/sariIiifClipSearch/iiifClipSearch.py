@@ -144,7 +144,6 @@ class Images:
 
     def _downloadImage(self, iiifUrl):
         width = 640
-        url = iiifUrl + '/full/' + str(width) + ',/0/default.jpg'
         url = iiifUrl + '/full/!' + str(width) + ',' + str(width) + '/0/default.jpg'
         photoPath = self._getFilePathForImage(iiifUrl)
 
@@ -176,6 +175,7 @@ class Images:
                 # Add local filename of image
                 row[IDENTIFIERCOLUMN] = self._customHash(row[self.iiifColumn])
                 csvWriter.writerow(row)
+        print(f"Saved SPARQL result to {self.imageCSV}")
 
     def addIdentifiersToCsv(self):
         """
@@ -280,6 +280,7 @@ class Images:
         sparql.setReturnFormat(JSON)
         try:
             results = sparql.query().convert()
+            print(f"Retrieved {len(results['results']['bindings'])} image URLs from SPARQL endpoint")
         except Exception as e:
             raise e
         # Save to CSV
