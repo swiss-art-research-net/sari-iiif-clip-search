@@ -111,7 +111,22 @@ class Images:
         return h.hexdigest()
     
     @retry(wait_random_min=1000, wait_random_max=4000, stop_max_attempt_number=5, wrap_exception=True)
-    def _download_from_iiif(self, iiifUrl, photoPath):
+    def _downloadFromIIIF(self, iiifUrl, photoPath):
+        """
+        Downloads an image from a IIIF URL and saves it to the specified photo path.
+
+        Args:
+            iiifUrl (str): The IIIF image URL to download.
+            photoPath (str): The local file path where the image will be saved.
+
+        Raises:
+            urllib.error.HTTPError: If a server error (HTTP 500) occurs, the exception is raised for retry handling.
+            Exception: Any other exceptions encountered during download are raised.
+
+        Notes:
+            - If the download fails due to a server error (HTTP 500), the exception is raised to allow retry logic.
+            - For other HTTP errors, an error message is printed and the exception is not retried.
+        """
         try:
             urllib.request.urlretrieve(iiifUrl, photoPath)
         # Catch the exception if the download fails for some reason
@@ -135,7 +150,7 @@ class Images:
         # Only download a photo if it doesn't exist
         if not photoPath.exists():
             try:
-                self._download_from_iiif(url, photoPath)
+                self._downloadFromIIIF(url, photoPath)
             # Catch the exception if the download fails for some reason
             # Give up after the retries are exhausted
             except RetryError as e:
