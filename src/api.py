@@ -15,6 +15,7 @@ try:
   dataDir = os.environ['CLIP_DATA_DIRECTORY']
 except:
   print("CLIP_DATA_DIRECTORY environment variable not set.")
+  import sys
   sys.exit(1)
 
 try:
@@ -70,6 +71,10 @@ def query():
         queryImage = decodeImageFromUrlString(request.values['image'])
         result = queryWithImage(queryImage, minScore=minScore, numResults=limit)
         app.logger.info(f"Query by image: queryImage='{queryImage}', minScore={minScore}, numResults={limit}")
+        return Response(json.dumps(result), mimetype='application/json')
+    elif 'indexed' in request.values:
+        queryIndexed = request.values['indexed']
+        result = queryWithIndexed(queryIndexed, minScore=minScore, numResults=limit)
         return Response(json.dumps(result), mimetype='application/json')
     return Response('{"status": "OK"}', mimetype='application/json')
 
@@ -191,6 +196,8 @@ def extractRequestFromSparqlQuery(query):
                 request['queryURL'] = triple['o']['value']
             elif getValueWithoutPrefix(triple['p']['value']) == 'queryImage' and triple['o']['type'] == Literal:
                 request['queryImage'] = triple['o']['value']
+            elif getValueWithoutPrefix(triple['p']['value']) == 'queryIndexed' and triple['o']['type'] == URIRef:
+                request['queryIndexed'] = triple['o']['value']
             elif getValueWithoutPrefix(triple['p']['value']) == 'minScore' and triple['o']['type'] == Literal:
                 request = addOption(request, 'minScore', float(triple['o']['value']))
             elif getValueWithoutPrefix(triple['p']['value']) == 'iiifUrl' and triple['o']['type'] == Variable:
@@ -214,7 +221,7 @@ def processSparqlQuery(query):
   return response
 
 def queryWithRequest(request):
-    if not 'queryString' in request and not 'queryURL' in request and not 'queryImage' in request:
+    if not 'queryString' in request and not 'queryURL' in request and not 'queryImage' in request and not 'queryIndexed' in request:
         return error('No query string provided')
     if 'options' in request:
         if 'minScore' in request['options']:
@@ -229,6 +236,8 @@ def queryWithRequest(request):
         results = clipQuery.query(request['queryString'], minScore=minScore, numResults=numResults)
     elif 'queryURL' in request:
         results = clipQuery.query(request['queryURL'], mode=Query.MODE_URL, minScore=minScore, numResults=numResults)
+    elif 'queryIndexed' in request:
+        results = clipQuery.query(request['queryIndexed'], mode=Query.MODE_INDEXED, minScore=minScore, numResults=numResults)
     elif 'queryImage' in request:
         queryImage = decodeImageFromUrlString(request['queryImage'])
         results = clipQuery.query(queryImage, mode=Query.MODE_IMAGE, minScore=minScore, numResults=numResults)
@@ -246,6 +255,12 @@ def queryWithRequest(request):
 
 def queryWithImage(image, *, minScore=DEFAULT_MINSCORE, numResults=DEFAULT_NUMRESULTS):
     results = clipQuery.query(image, mode=Query.MODE_IMAGE, numResults=numResults, minScore=minScore)
+    for result in results:
+        result['link'] = result['url'] + '/full/640,/0/default.jpg'
+    return results
+
+def queryWithIndexed(url, *, minScore=DEFAULT_MINSCORE, numResults=DEFAULT_NUMRESULTS):
+    results = clipQuery.query(url, mode=Query.MODE_INDEXED, numResults=numResults, minScore=minScore)
     for result in results:
         result['link'] = result['url'] + '/full/640,/0/default.jpg'
     return results

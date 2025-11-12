@@ -1,0 +1,23 @@
+PREFIX  urn:  <http://fliqz.com/>
+PREFIX  org:  <http://example.com/org/>
+PREFIX  la:   <https://linked.art/ns/terms/>
+PREFIX  person: <http://example.com/person/>
+PREFIX  wdt:  <http://www.wikidata.org/prop/direct/>
+PREFIX  skos: <http://www.w3.org/2004/02/skos/core#>
+PREFIX  rdfs: <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX  wd:   <http://www.wikidata.org/entity/>
+PREFIX  crmdig: <http://www.ics.forth.gr/isl/CRMdig/>
+PREFIX  crm:  <http://www.cidoc-crm.org/cidoc-crm/>
+PREFIX	aat: <http://vocab.getty.edu/aat/>
+
+SELECT DISTINCT ?iiif_url ?do WHERE
+{
+  ?do crm:P138_represents ?s ;
+      a crmdig:D1_Digital_Object ;
+      la:digitally_available_via/la:access_point ?point ;
+      crm:P1_is_identified_by ?id .
+  ?identifier crm:P2_has_type aat:300404012 ;
+      crm:P190_has_symbolic_content ?localid .
+  BIND(URI(?point) as ?iiif_url)  	
+}
+LIMIT 10

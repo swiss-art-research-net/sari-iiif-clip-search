@@ -61,6 +61,22 @@ cp .env.example .env
 
 Adjust the values in your `.env` file as required. The `CLIP_DATA_DIRECTORY` should point to a directory containing the extracted CLIP features. You can either use one of those provided in `precomputedFeatures` or you can extract your own using the provided `build.py` script.
 
+To connect the service to an existing Docker network, create a `docker-compose.override.yml` file and add the following content:
+
+```yaml
+version: "3"
+services:
+  clip-service:
+    networks:
+      - default
+      - external_docker_network
+
+networks:
+  default: null
+  external_docker_network:
+    name: your_external_docker_network # Name of the external docker network
+```
+
 Run the service using `docker-compose up -d`. The service is now reachable at `http://localhost:5000` (using the default port). Note that the service takes some time to start up as it initialises the CLIP model.
 
 ### REST API
@@ -187,8 +203,7 @@ python src/build.py \
 
 ## REST API Swagger
 
-```swagger
-swagger: "2.0"
+```swaggerswagger: "2.0"
 info:
   version: "1.0.0"
   title: "IIIF CLIP Search"
@@ -204,7 +219,17 @@ paths:
       - name: "str"
         in: "query"
         description: "A string to query the index with"
-        required: true
+        required: false
+        type: "string"
+      - name: "url"
+        in: "query"
+        description: "An URL of an image to query the index with"
+        required: false
+        type: "string"
+      - name: "image"
+        in: "query"
+        description: "A base64 encoded image to query the index with"
+        required: false
         type: "string"
       - name: "minSore"
         in: "query"
@@ -228,14 +253,24 @@ paths:
               $ref: "#/definitions/queryResponse"
         "500":
           description: "An error occured"
+          
 definitions:
   queryResponse:
     type: "object"
     properties:
+      "score":
+        type: "number"
+        format: "float"
+        minimum: 0
+        maximum: 1
+      "imageId":
+        type: "string"
       "url":
         type: "string"
       "score":
         type: "integer"
+      "link":
+        type: "string"
 ```
 
 ## Acknowledgements

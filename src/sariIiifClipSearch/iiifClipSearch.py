@@ -145,6 +145,7 @@ class Images:
     def _downloadImage(self, iiifUrl):
         width = 640
         url = iiifUrl + '/full/' + str(width) + ',/0/default.jpg'
+        url = iiifUrl + '/full/!' + str(width) + ',' + str(width) + '/0/default.jpg'
         photoPath = self._getFilePathForImage(iiifUrl)
 
         # Only download a photo if it doesn't exist
@@ -176,6 +177,23 @@ class Images:
                 row[IDENTIFIERCOLUMN] = self._customHash(row[self.iiifColumn])
                 csvWriter.writerow(row)
 
+    def addIdentifiersToCsv(self):
+        """
+        Populate a column that contains the local identifiers of the images to the csv file.
+        """
+        rows = []
+        with open(self.imageCSV, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                row[IDENTIFIERCOLUMN] = self._customHash(row[self.iiifColumn])
+                rows.append(row)
+        fieldnames = rows[0].keys()
+        with open(self.imageCSV, 'w') as f:
+            csvWriter = csv.DictWriter(f, fieldnames=fieldnames)
+            csvWriter.writeheader()
+            for row in rows:
+                csvWriter.writerow(row)
+    
     def downloadImages(self):
         """
         Download the images from the CSV file.
@@ -277,6 +295,7 @@ class Query:
     MODE_TEXT = 1
     MODE_URL = 2
     MODE_IMAGE = 3
+    MODE_INDEXED = 4
 
     def __init__(self, *, dataDir, imageCSV=None, iiifColumn="iiif_url"):
         """
@@ -341,6 +360,23 @@ class Query:
             photoFeatures = photoFeatures.cpu().numpy()
 
             similarities = list((photoFeatures @ self.imageFeatures.T).squeeze(0))
+        elif mode == self.MODE_INDEXED:
+            # Find the identifier of the image with the corresponding IIIF URL
+            identifier = self.imageData[self.imageData[self.iiifColumn] == queryInput][IDENTIFIERCOLUMN].iloc[0]
+            
+            # Find the index of the image with the corresponding identifier in imageFeatures
+            matchingRow = self.imageIDs[self.imageIDs['image_id'] == identifier]
+            if not matchingRow.empty:
+                imageIndex = self.imageIDs[self.imageIDs['image_id'] == identifier].index[0]
+            else:
+                # If the image is not indexed, return an empty array
+                return []
+
+            # Get the feature vector for the image
+            imageFeatures = self.imageFeatures[imageIndex]
+
+            # Compute the similarity between the description and each photo using the Cosine similarity
+            similarities = list((imageFeatures @ self.imageFeatures.T))
 
         # Sort the images by their similarity score
         bestImages = sorted(zip(similarities, range(self.imageFeatures.shape[0])), key=lambda x: x[0], reverse=True)
