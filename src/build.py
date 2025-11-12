@@ -34,7 +34,7 @@ CSV mode:
 
 Parameters:
     --mode: The mode of operation. Either SPARQL or CSV.
-    --imageQuery: The SPARQL query to retrieve the IIIF image URLs. Required in SPARQL mode.
+    --imageQueryPath: The SPARQL query to retrieve the IIIF image URLs. Required in SPARQL mode.
     --endpoint: The SPARQL endpoint to query. Required in SPARQL mode.
     --csvFile: The path to the CSV file. Required in CSV mode
     --dataDir: The path to the directory where the features will be stored.
@@ -70,14 +70,18 @@ def build(options):
         raise Exception('Unknown mode: ' + options['mode'])
 
     if mode == Images.MODE_SPARQL:
-        imageQuery = options['imageQuery']
+        imageQuery = None
+        imageQueryPath = options['imageQueryPath']
+        with open(imageQueryPath, 'r') as f:
+            imageQuery = f.read()
+        assert imageQuery is not None, "Could not read image query from " + imageQueryPath
         endpoint = options['endpoint']
 
         imageProcessor = Images(
             mode=mode,
             dataDir=options['dataDir'],
             iiifColumn=options['iiifColumn'],
-            imageQuery=options['imageQuery'],
+            imageQuery=imageQuery,
             endpoint=options['endpoint'],
             threads=options['threads'],
             batchSize=options['batchSize']
@@ -136,8 +140,8 @@ if __name__ == "__main__":
             print("The CSV file is required")
             sys.exit(1)
     elif options['mode'] == 'SPARQL':
-        if not 'imageQuery' in options:
-            print("The SPARQL image query is required")
+        if not 'imageQueryPath' in options:
+            print("A path to the SPARQL image query is required")
             sys.exit(1)
         if not 'endpoint' in options:
             print("The SPARQL endpoint is required")
