@@ -10,14 +10,9 @@ PREFIX  crmdig: <http://www.ics.forth.gr/isl/CRMdig/>
 PREFIX  crm:  <http://www.cidoc-crm.org/cidoc-crm/>
 PREFIX	aat: <http://vocab.getty.edu/aat/>
 
-SELECT DISTINCT ?iiif_url ?do WHERE
+SELECT DISTINCT ?iiif_url ?digital_object WHERE
 {
-  ?do crm:P138_represents ?s ;
-      a crmdig:D1_Digital_Object ;
-      la:digitally_available_via/la:access_point ?point ;
-      crm:P1_is_identified_by ?id .
-  ?identifier crm:P2_has_type aat:300404012 ;
-      crm:P190_has_symbolic_content ?localid .
+  ?digital_object a crmdig:D1_Digital_Object ;
+      la:digitally_available_via/la:access_point ?point .
   BIND(URI(?point) as ?iiif_url)  	
 }
-LIMIT 10
