@@ -21,7 +21,7 @@ SPARQL mode:
 
     python build.py \
         --mode SPARQL \
-        --imageQuery "PREFIX dcterms: <http://purl.org/dc/terms/ PREFIX la: <https://linked.art/ns/terms/> SELECT ?iiif_url WHERE { ?service a la:DigitalService ; dcterms:conformsTo <http://iiif.io/api/image> ; la:access_point ?iiif_url .}  ORDER BY ?iiif_url LIMIT 100" \
+        --imageQueryPath /path/to/query.sparql \
         --endpoint http://example.org/sparql \
         --dataDir ./myFeatures
 
@@ -46,17 +46,17 @@ Parameters:
 
 
 dataDir = '/workdir/data/'
-imageQuery = """
-PREFIX dcterms: <http://purl.org/dc/terms/>
-PREFIX la: <https://linked.art/ns/terms/>
-SELECT ?iiif_url WHERE {
-    ?service a la:DigitalService ;
-        dcterms:conformsTo <http://iiif.io/api/image> ;
-        la:access_point ?iiif_url .
-} 
-ORDER BY ?iiif_url
-LIMIT 100
-"""
+#imageQuery = """
+#PREFIX dcterms: <http://purl.org/dc/terms/>
+#PREFIX la: <https://linked.art/ns/terms/>
+#SELECT ?iiif_url WHERE {
+#    ?service a la:DigitalService ;
+#        dcterms:conformsTo <http://iiif.io/api/image> ;
+#        la:access_point ?iiif_url .
+#} 
+#ORDER BY ?iiif_url
+#LIMIT 100
+#"""
 endpoint = 'http://blazegraph:8080/blazegraph/sparql'
 
 def build(options):
@@ -75,7 +75,6 @@ def build(options):
         with open(imageQueryPath, 'r') as f:
             imageQuery = f.read()
         assert imageQuery is not None, "Could not read image query from " + imageQueryPath
-        endpoint = options['endpoint']
 
         imageProcessor = Images(
             mode=mode,
