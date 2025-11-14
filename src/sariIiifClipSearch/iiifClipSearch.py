@@ -15,7 +15,8 @@ from hashlib import blake2b
 from pathlib import Path
 from PIL import Image
 from SPARQLWrapper import SPARQLWrapper, JSON
-from multiprocessing.pool import ThreadPool
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
 
 IDENTIFIERCOLUMN = 'localIdentifier'
 
@@ -138,7 +139,7 @@ class Images:
                 if e.code == 500:
                     raise e
                 else:
-                    print(f"Cannot download {iiifUrl} (HTTP Error: {e.code})")
+                    print(f"Cannot download {iiifUrl} (HTTP Error: {e.code})", file=sys.stderr)
             else:
                 raise e
 
@@ -154,7 +155,7 @@ class Images:
             # Catch the exception if the download fails for some reason
             # Give up after the retries are exhausted
             except RetryError as e:
-                print(f"Error downloading {url}: retries exhausted")
+                print(f"Error downloading {url}: retries exhausted", file=sys.stderr)
 
     def _getFilePathForImage(self, iiifUrl):
         photoId = self._customHash(iiifUrl)
@@ -193,20 +194,29 @@ class Images:
             csvWriter.writeheader()
             for row in rows:
                 csvWriter.writerow(row)
-    
+
     def downloadImages(self):
         """
         Download the images from the CSV file.
-        If SPARQL mode is used, the images need to be queried first and will then be automatically savedin a CSV file.
+        If SPARQL mode is used, the images need to be queried first and will then be automatically saved
+        in a CSV file.
         """
-        urls = []
-        with open(self.imageCSV, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                urls.append(row[self.iiifColumn])
 
-        pool = ThreadPool(self.threads)
-        pool.map(self._downloadImage, urls)
+        # Load URLs from CSV
+        with open(self.imageCSV, "r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            urls = [row[self.iiifColumn] for row in reader]
+
+        with ThreadPoolExecutor(max_workers=self.threads) as executor:
+            futures = {executor.submit(self._downloadImage, url): url for url in urls}
+
+            # add progress bar
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Downloading images", file=sys.stdout):
+                url = futures[future]
+                try:
+                    future.result()  # Raises exception if `_downloadImage` failed
+                except Exception as e:
+                    print(f"[ERROR] Failed to download {url}: {e}", file=sys.stderr)
 
     def processImages(self):
         """
