@@ -17,6 +17,9 @@ from PIL import Image
 from SPARQLWrapper import SPARQLWrapper, JSON
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
+import logging
+
+logger = logging.getLogger(__name__)
 
 IDENTIFIERCOLUMN = 'localIdentifier'
 
@@ -275,6 +278,7 @@ class Images:
         features = np.concatenate(featuresList)
         np.save(self.featuresDir / "features.npy", features)
 
+        # TODO: deduplicate the image IDs
         imageIDs = pd.concat([pd.read_csv(idsFile) for idsFile in sorted(self.featuresDir.glob("*.csv"))])
         imageIDs.to_csv(self.featuresDir / "imageIds.csv", index=False)
 
@@ -330,10 +334,49 @@ class Query:
         self.imageFeatures = np.load(self.featuresDir / 'features.npy')
         self.imageIDs = pd.read_csv(self.featuresDir / 'imageIds.csv')
         self.imageData = pd.read_csv(self.imageCSV)
+        self._sanityCheckImageIdentifiers()        
 
         # Load the open CLIP model
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
+
+    def _sanityCheckImageIdentifiers(self):
+        """
+        Detects and reports discrepancies between the number of downloadable/downloaded/indexed images.
+        """
+
+        # this is the list of imageIDs coming from the CSV FILE with IIIF URLs etc.
+        image_ids_from_source = self.imageData.localIdentifier.to_list()
+        
+        # this is the list of imageIDs coming from the CSV FILE generated at the time of running the CLIP indexing
+        # This CSV file contains the filenames of images that are ran through the batch-wise CLIP indexing process.
+        image_ids_from_processed_images = self.imageIDs.image_id.to_list()
+        number_downloaded_image_files = len(list(self.imageDir.glob('*.jpg')))
+        number_indexed_images_files = len(set(image_ids_from_processed_images))
+        
+        if number_downloaded_image_files != number_indexed_images_files:
+            if number_downloaded_image_files > number_indexed_images_files:
+                delta =  number_downloaded_image_files - number_indexed_images_files
+            else:
+                delta = number_indexed_images_files - number_downloaded_image_files
+            logger.warning(
+                f'{number_downloaded_image_files} images were downloaded '
+                f'but {number_indexed_images_files} images were indexed (delta={delta})'
+            )
+
+
+        # The first misalignment between the two lists indicates images for which the knowledge graph
+        # contains a IIIF manifest URL but that, for some reasaon, could not be downloaded from IIIF.
+        image_ids_not_processed = len(set(image_ids_from_source).difference(set(image_ids_from_processed_images)))
+
+        # The second misalignment is more serious, as these are images that were indexed with CLIP
+        # but for which we cannot retrieve the IIIF URL from which the image was downloaded.
+        image_ids_not_in_source = len(set(image_ids_from_processed_images).difference(set(image_ids_from_source)))
+        
+        msg_1 = f"[WARNING] {image_ids_not_processed} images could not be downloaded from the IIIF server"
+        msg_2 = f"[WARNING] {image_ids_not_in_source} images indexed by CLIP will not appear in the search results"
+        logger.warning(msg_1)
+        logger.warning(msg_2)
 
     def query(self, queryInput, *, mode=MODE_TEXT, numResults=5, minScore=0.2):
         """
@@ -399,11 +442,18 @@ class Query:
             if score < minScore:
                 break
             imageId = self.imageIDs.iloc[image[1]]['image_id']
-            imageUrl = self.imageData.loc[self.imageData[IDENTIFIERCOLUMN] == imageId][self.iiifColumn].values[0]
+            try:
+                imageUrl = self.imageData.loc[self.imageData[IDENTIFIERCOLUMN] == imageId][self.iiifColumn].values[0]
+            except IndexError:
+                # There may be cases where a CLIP-indexed image is not found in the 
+                # CSV file generated from running the source SPARQL query. E.g. as data can change
+                # in the triple store, not empying the folder where images are downloaded before running `build.py`
+                # may lead to this issue. Or some images may fail to process in the batched-based CLIP indexing.
+                logger.warning("[WARNING] Image ID not found in image data: " + str(imageId))
             result = {
                 'score': score,
                 'imageId': str(imageId),
                 'url': str(imageUrl)
             }
             results.append(result)
-        return results
+        return results#
