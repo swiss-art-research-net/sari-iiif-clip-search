@@ -8,6 +8,7 @@ requests
 tqdm
 ftfy
 regex
+retrying
 
 # reqs to run src/api.py
 flask
