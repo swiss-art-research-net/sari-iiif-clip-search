@@ -340,6 +340,7 @@ class Query:
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
 
+    # TODO: change casing of variables in this function
     def _sanityCheckImageIdentifiers(self):
         """
         Detects and reports discrepancies between the number of downloadable/downloaded/indexed images.
