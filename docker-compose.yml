@@ -4,7 +4,6 @@ services:
     container_name: ${PROJECT_NAME}_service
     image: swissartresearx/sari-iiif-clip-search:latest
     build: .
-    platform: linux/amd64
     logging:
       driver: "json-file"
       options:
@@ -14,7 +13,6 @@ services:
       interval: 5m
       timeout: 10s
       retries: 2
-      start_period: 40s
     environment:
       - CLIP_DATA_DIRECTORY=${CLIP_DATA_DIRECTORY}
     ports:
