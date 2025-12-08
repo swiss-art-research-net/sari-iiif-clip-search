@@ -1,0 +1,62 @@
+version: '3'
+
+dotenv:
+  - .env
+
+vars:
+  DATA_DIR: '{{default "/workdir/data" .ENV.CLIP_DATA_DIRECTORY}}'
+
+tasks:
+  default:
+    desc: Show available tasks
+    cmds:
+      - task --list
+
+  build-index:
+    desc: Build the CLIP search index from CSV or SPARQL sources
+    summary: |
+      Uses src/build.py. MODE, DATA_DIR and other arguments can be provided via
+      task variables (highest priority) or the .env file.
+    vars:
+      MODE_VALUE: '{{default .ENV.MODE .MODE}}'
+      CSV_FILE_VALUE: '{{default .ENV.CSV_FILE .CSV_FILE}}'
+      IMAGE_QUERY_PATH_VALUE: '{{default .ENV.IMAGE_QUERY_PATH .IMAGE_QUERY_PATH}}'
+      ENDPOINT_VALUE: '{{default .ENV.ENDPOINT .ENDPOINT}}'
+      IIIF_COLUMN_VALUE: '{{default .ENV.IIIF_COLUMN .IIIF_COLUMN}}'
+      THREADS_VALUE: '{{default .ENV.THREADS .THREADS}}'
+      BATCH_SIZE_VALUE: '{{default .ENV.BATCH_SIZE .BATCH_SIZE}}'
+    cmds:
+      - |
+        python {{.WORKDIR}}/src/build.py --mode {{.MODE_VALUE}} {{- if .IMAGE_QUERY_PATH_VALUE }} --imageQueryPath {{.IMAGE_QUERY_PATH_VALUE}}{{ end }} {{- if .ENDPOINT_VALUE }} --endpoint {{.ENDPOINT_VALUE}}{{ end }} {{- if .CSV_FILE_VALUE }} --csvFile {{.CSV_FILE_VALUE}}{{ end }} --dataDir {{.CLIP_DATA_DIRECTORY}} {{- if .IIIF_COLUMN_VALUE }} --iiifColumn {{.IIIF_COLUMN_VALUE}}{{ end }} {{- if .THREADS_VALUE }} --threads {{.THREADS_VALUE}}{{ end }} {{- if .BATCH_SIZE_VALUE }} --batchSize {{.BATCH_SIZE_VALUE}}{{ end }} 2> {{.CLIP_DATA_DIRECTORY}}log.txt
+
+  build-index-csv:
+    desc: Convenience wrapper for CSV mode
+    summary: |
+      Only requires CSV_FILE. Other arguments can still be supplied via vars or .env.
+    cmds:
+      - task: build-index
+        vars:
+          MODE: CSV
+          CSV_FILE: '{{default .ENV.CSV_FILE .CSV_FILE}}'
+
+  build-index-sparql:
+    desc: Convenience wrapper for SPARQL mode
+    summary: |
+      Only requires IMAGE_QUERY_PATH and ENDPOINT. Other arguments can be supplied via vars or .env.
+    cmds:
+      - task: build-index
+        vars:
+          MODE: SPARQL
+          IMAGE_QUERY_PATH: '{{default .ENV.IMAGE_QUERY_PATH .IMAGE_QUERY_PATH}}'
+          ENDPOINT: '{{default .ENV.ENDPOINT .ENDPOINT}}'
+
+  run-clip-service:
+    desc: Run the CLIP search API server
+    cmds:
+      - python {{.WORKDIR}}/src/api.py
+
+  test:
+    desc: Run tests
+    cmds:
+      - python {{.WORKDIR}}/src/test.py
+
