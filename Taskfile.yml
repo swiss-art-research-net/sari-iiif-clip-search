@@ -50,8 +50,8 @@ tasks:
           IMAGE_QUERY_PATH: '{{default .ENV.IMAGE_QUERY_PATH .IMAGE_QUERY_PATH}}'
           ENDPOINT: '{{default .ENV.ENDPOINT .ENDPOINT}}'
 
-  run-clip-service:
-    desc: Run the CLIP search API server
+  start-clip-service:
+    desc: Start the CLIP search API server
     cmds:
       - python {{.WORKDIR}}/src/api.py
 
