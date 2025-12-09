@@ -34,7 +34,7 @@ CSV mode:
 
 Parameters:
     --mode: The mode of operation. Either SPARQL or CSV.
-    --imageQueryPath: The SPARQL query to retrieve the IIIF image URLs. Required in SPARQL mode.
+    --imageQueryPath: The path to the SPARQL query to retrieve the IIIF image URLs. Required in SPARQL mode.
     --endpoint: The SPARQL endpoint to query. Required in SPARQL mode.
     --csvFile: The path to the CSV file. Required in CSV mode
     --dataDir: The path to the directory where the features will be stored.
