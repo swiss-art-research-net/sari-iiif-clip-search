@@ -1,4 +1,4 @@
-from sariIiifClipSearch import Images, Query
+from sariIiifClipSearch import Query
 
 dataDir = '/precomputedFeatures/bso/'
 

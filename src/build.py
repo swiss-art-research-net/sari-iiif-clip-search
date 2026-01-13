@@ -21,7 +21,7 @@ SPARQL mode:
 
     python build.py \
         --mode SPARQL \
-        --imageQuery "PREFIX dcterms: <http://purl.org/dc/terms/ PREFIX la: <https://linked.art/ns/terms/> SELECT ?iiif_url WHERE { ?service a la:DigitalService ; dcterms:conformsTo <http://iiif.io/api/image> ; la:access_point ?iiif_url .}  ORDER BY ?iiif_url LIMIT 100" \
+        --imageQueryPath /path/to/query.sparql \
         --endpoint http://example.org/sparql \
         --dataDir ./myFeatures
 
@@ -34,7 +34,7 @@ CSV mode:
 
 Parameters:
     --mode: The mode of operation. Either SPARQL or CSV.
-    --imageQuery: The SPARQL query to retrieve the IIIF image URLs. Required in SPARQL mode.
+    --imageQueryPath: The path to the SPARQL query to retrieve the IIIF image URLs. Required in SPARQL mode.
     --endpoint: The SPARQL endpoint to query. Required in SPARQL mode.
     --csvFile: The path to the CSV file. Required in CSV mode
     --dataDir: The path to the directory where the features will be stored.
@@ -46,17 +46,17 @@ Parameters:
 
 
 dataDir = '/workdir/data/'
-imageQuery = """
-PREFIX dcterms: <http://purl.org/dc/terms/>
-PREFIX la: <https://linked.art/ns/terms/>
-SELECT ?iiif_url WHERE {
-    ?service a la:DigitalService ;
-        dcterms:conformsTo <http://iiif.io/api/image> ;
-        la:access_point ?iiif_url .
-} 
-ORDER BY ?iiif_url
-LIMIT 100
-"""
+#imageQuery = """
+#PREFIX dcterms: <http://purl.org/dc/terms/>
+#PREFIX la: <https://linked.art/ns/terms/>
+#SELECT ?iiif_url WHERE {
+#    ?service a la:DigitalService ;
+#        dcterms:conformsTo <http://iiif.io/api/image> ;
+#        la:access_point ?iiif_url .
+#} 
+#ORDER BY ?iiif_url
+#LIMIT 100
+#"""
 endpoint = 'http://blazegraph:8080/blazegraph/sparql'
 
 def build(options):
@@ -70,20 +70,22 @@ def build(options):
         raise Exception('Unknown mode: ' + options['mode'])
 
     if mode == Images.MODE_SPARQL:
-        imageQuery = options['imageQuery']
-        endpoint = options['endpoint']
+        imageQuery = None
+        imageQueryPath = options['imageQueryPath']
+        with open(imageQueryPath, 'r') as f:
+            imageQuery = f.read()
+        assert imageQuery is not None, "Could not read image query from " + imageQueryPath
 
         imageProcessor = Images(
             mode=mode,
             dataDir=options['dataDir'],
             iiifColumn=options['iiifColumn'],
-            imageQuery=options['imageQuery'],
+            imageQuery=imageQuery,
             endpoint=options['endpoint'],
             threads=options['threads'],
             batchSize=options['batchSize']
         )
     elif mode == Images.MODE_CSV:
-        csvFile = options['csvFile']
 
         imageProcessor = Images(
             mode=mode,
@@ -103,6 +105,9 @@ def build(options):
 
     print("Downloading images")
     imageProcessor.downloadImages()
+
+    if mode == Images.MODE_CSV:
+        imageProcessor.addIdentifiersToCsv()
 
     print("Processing images")
     imageProcessor.processImages()
@@ -134,8 +139,8 @@ if __name__ == "__main__":
             print("The CSV file is required")
             sys.exit(1)
     elif options['mode'] == 'SPARQL':
-        if not 'imageQuery' in options:
-            print("The SPARQL image query is required")
+        if not 'imageQueryPath' in options:
+            print("A path to the SPARQL image query is required")
             sys.exit(1)
         if not 'endpoint' in options:
             print("The SPARQL endpoint is required")

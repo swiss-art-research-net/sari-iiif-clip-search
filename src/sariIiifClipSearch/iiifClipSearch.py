@@ -1,6 +1,8 @@
 import sys, os
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'clip'))
 
+from retrying import retry
+from retrying import RetryError
 import csv
 import math
 import numpy as np
@@ -13,7 +15,11 @@ from hashlib import blake2b
 from pathlib import Path
 from PIL import Image
 from SPARQLWrapper import SPARQLWrapper, JSON
-from multiprocessing.pool import ThreadPool
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
+import logging
+
+logger = logging.getLogger(__name__)
 
 IDENTIFIERCOLUMN = 'localIdentifier'
 
@@ -107,20 +113,52 @@ class Images:
         h = blake2b(digest_size=20)
         h.update(inputString.encode())
         return h.hexdigest()
+    
+    @retry(wait_random_min=1000, wait_random_max=4000, stop_max_attempt_number=5, wrap_exception=True)
+    def _downloadFromIIIF(self, iiifUrl, photoPath):
+        """
+        Downloads an image from a IIIF URL and saves it to the specified photo path.
+
+        Args:
+            iiifUrl (str): The IIIF image URL to download.
+            photoPath (str): The local file path where the image will be saved.
+
+        Raises:
+            urllib.error.HTTPError: If a server error (HTTP 500) occurs, the exception is raised for retry handling.
+            Exception: Any other exceptions encountered during download are raised.
+
+        Notes:
+            - If the download fails due to a server error (HTTP 500), the exception is raised to allow retry logic.
+            - For other HTTP errors, an error message is printed and the exception is not retried.
+        """
+        try:
+            urllib.request.urlretrieve(iiifUrl, photoPath)
+        # Catch the exception if the download fails for some reason
+        except Exception as e:
+            # If it's an image server error (HTTP 500), retry as per function decorator parameters,
+            # as it might be a temporary issue related to parallel requests
+            if isinstance(e, urllib.error.HTTPError):
+                # Only retry for server errors
+                if e.code == 500:
+                    raise e
+                else:
+                    print(f"Cannot download {iiifUrl} (HTTP Error: {e.code})", file=sys.stderr)
+            else:
+                raise e
 
     def _downloadImage(self, iiifUrl):
         width = 640
-        url = iiifUrl + '/full/' + str(width) + ',/0/default.jpg'
+        url = iiifUrl + '/full/!' + str(width) + ',' + str(width) + '/0/default.jpg'
         photoPath = self._getFilePathForImage(iiifUrl)
 
         # Only download a photo if it doesn't exist
         if not photoPath.exists():
             try:
-                urllib.request.urlretrieve(url, photoPath)
-            except:
-                # Catch the exception if the download fails for some reason
-                print(f"Cannot download {url}")
-                pass
+                self._downloadFromIIIF(url, photoPath)
+            # Catch the exception if the download fails for some reason
+            # Give up after the retries are exhausted
+            except RetryError as e:
+                print(f"Error downloading {url}: retries exhausted", file=sys.stderr)
 
     def _getFilePathForImage(self, iiifUrl):
         photoId = self._customHash(iiifUrl)
@@ -141,20 +179,47 @@ class Images:
                 # Add local filename of image
                 row[IDENTIFIERCOLUMN] = self._customHash(row[self.iiifColumn])
                 csvWriter.writerow(row)
+        print(f"Saved SPARQL result to {self.imageCSV}")
+
+    def addIdentifiersToCsv(self):
+        """
+        Populate a column that contains the local identifiers of the images to the csv file.
+        """
+        rows = []
+        with open(self.imageCSV, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                row[IDENTIFIERCOLUMN] = self._customHash(row[self.iiifColumn])
+                rows.append(row)
+        fieldnames = rows[0].keys()
+        with open(self.imageCSV, 'w') as f:
+            csvWriter = csv.DictWriter(f, fieldnames=fieldnames)
+            csvWriter.writeheader()
+            for row in rows:
+                csvWriter.writerow(row)
 
     def downloadImages(self):
         """
         Download the images from the CSV file.
-        If SPARQL mode is used, the images need to be queried first and will then be automatically savedin a CSV file.
+        If SPARQL mode is used, the images need to be queried first and will then be automatically saved
+        in a CSV file.
         """
-        urls = []
-        with open(self.imageCSV, 'r') as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                urls.append(row[self.iiifColumn])
 
-        pool = ThreadPool(self.threads)
-        pool.map(self._downloadImage, urls)
+        # Load URLs from CSV
+        with open(self.imageCSV, "r", newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            urls = [row[self.iiifColumn] for row in reader]
+
+        with ThreadPoolExecutor(max_workers=self.threads) as executor:
+            futures = {executor.submit(self._downloadImage, url): url for url in urls}
+
+            # add progress bar
+            for future in tqdm(as_completed(futures), total=len(futures), desc="Downloading images", file=sys.stdout):
+                url = futures[future]
+                try:
+                    future.result()  # Raises exception if `_downloadImage` failed
+                except Exception as e:
+                    print(f"[ERROR] Failed to download {url}: {e}", file=sys.stderr)
 
     def processImages(self):
         """
@@ -213,6 +278,7 @@ class Images:
         features = np.concatenate(featuresList)
         np.save(self.featuresDir / "features.npy", features)
 
+        # TODO: deduplicate the image IDs
         imageIDs = pd.concat([pd.read_csv(idsFile) for idsFile in sorted(self.featuresDir.glob("*.csv"))])
         imageIDs.to_csv(self.featuresDir / "imageIds.csv", index=False)
 
@@ -228,6 +294,7 @@ class Images:
         sparql.setReturnFormat(JSON)
         try:
             results = sparql.query().convert()
+            print(f"Retrieved {len(results['results']['bindings'])} image URLs from SPARQL endpoint")
         except Exception as e:
             raise e
         # Save to CSV
@@ -243,6 +310,7 @@ class Query:
     MODE_TEXT = 1
     MODE_URL = 2
     MODE_IMAGE = 3
+    MODE_INDEXED = 4
 
     def __init__(self, *, dataDir, imageCSV=None, iiifColumn="iiif_url"):
         """
@@ -266,10 +334,50 @@ class Query:
         self.imageFeatures = np.load(self.featuresDir / 'features.npy')
         self.imageIDs = pd.read_csv(self.featuresDir / 'imageIds.csv')
         self.imageData = pd.read_csv(self.imageCSV)
+        self._sanityCheckImageIdentifiers()        
 
         # Load the open CLIP model
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model, self.preprocess = clip.load("ViT-B/32", device=self.device)
+
+    # TODO: change casing of variables in this function
+    def _sanityCheckImageIdentifiers(self):
+        """
+        Detects and reports discrepancies between the number of downloadable/downloaded/indexed images.
+        """
+
+        # this is the list of imageIDs coming from the CSV FILE with IIIF URLs etc.
+        image_ids_from_source = self.imageData.localIdentifier.to_list()
+        
+        # this is the list of imageIDs coming from the CSV FILE generated at the time of running the CLIP indexing
+        # This CSV file contains the filenames of images that are ran through the batch-wise CLIP indexing process.
+        image_ids_from_processed_images = self.imageIDs.image_id.to_list()
+        number_downloaded_image_files = len(list(self.imageDir.glob('*.jpg')))
+        number_indexed_images_files = len(set(image_ids_from_processed_images))
+        
+        if number_downloaded_image_files != number_indexed_images_files:
+            if number_downloaded_image_files > number_indexed_images_files:
+                delta =  number_downloaded_image_files - number_indexed_images_files
+            else:
+                delta = number_indexed_images_files - number_downloaded_image_files
+            logger.warning(
+                f'{number_downloaded_image_files} images were downloaded '
+                f'but {number_indexed_images_files} images were indexed (delta={delta})'
+            )
+
+
+        # The first misalignment between the two lists indicates images for which the knowledge graph
+        # contains a IIIF manifest URL but that, for some reasaon, could not be downloaded from IIIF.
+        image_ids_not_processed = len(set(image_ids_from_source).difference(set(image_ids_from_processed_images)))
+
+        # The second misalignment is more serious, as these are images that were indexed with CLIP
+        # but for which we cannot retrieve the IIIF URL from which the image was downloaded.
+        image_ids_not_in_source = len(set(image_ids_from_processed_images).difference(set(image_ids_from_source)))
+        
+        msg_1 = f"[WARNING] {image_ids_not_processed} images could not be downloaded from the IIIF server"
+        msg_2 = f"[WARNING] {image_ids_not_in_source} images indexed by CLIP will not appear in the search results"
+        logger.warning(msg_1)
+        logger.warning(msg_2)
 
     def query(self, queryInput, *, mode=MODE_TEXT, numResults=5, minScore=0.2):
         """
@@ -307,6 +415,23 @@ class Query:
             photoFeatures = photoFeatures.cpu().numpy()
 
             similarities = list((photoFeatures @ self.imageFeatures.T).squeeze(0))
+        elif mode == self.MODE_INDEXED:
+            # Find the identifier of the image with the corresponding IIIF URL
+            identifier = self.imageData[self.imageData[self.iiifColumn] == queryInput][IDENTIFIERCOLUMN].iloc[0]
+            
+            # Find the index of the image with the corresponding identifier in imageFeatures
+            matchingRow = self.imageIDs[self.imageIDs['image_id'] == identifier]
+            if not matchingRow.empty:
+                imageIndex = self.imageIDs[self.imageIDs['image_id'] == identifier].index[0]
+            else:
+                # If the image is not indexed, return an empty array
+                return []
+
+            # Get the feature vector for the image
+            imageFeatures = self.imageFeatures[imageIndex]
+
+            # Compute the similarity between the description and each photo using the Cosine similarity
+            similarities = list((imageFeatures @ self.imageFeatures.T))
 
         # Sort the images by their similarity score
         bestImages = sorted(zip(similarities, range(self.imageFeatures.shape[0])), key=lambda x: x[0], reverse=True)
@@ -318,11 +443,18 @@ class Query:
             if score < minScore:
                 break
             imageId = self.imageIDs.iloc[image[1]]['image_id']
-            imageUrl = self.imageData.loc[self.imageData[IDENTIFIERCOLUMN] == imageId][self.iiifColumn].values[0]
+            try:
+                imageUrl = self.imageData.loc[self.imageData[IDENTIFIERCOLUMN] == imageId][self.iiifColumn].values[0]
+            except IndexError:
+                # There may be cases where a CLIP-indexed image is not found in the 
+                # CSV file generated from running the source SPARQL query. E.g. as data can change
+                # in the triple store, not empying the folder where images are downloaded before running `build.py`
+                # may lead to this issue. Or some images may fail to process in the batched-based CLIP indexing.
+                logger.warning("[WARNING] Image ID not found in image data: " + str(imageId))
             result = {
                 'score': score,
                 'imageId': str(imageId),
                 'url': str(imageUrl)
             }
             results.append(result)
-        return results
+        return results#

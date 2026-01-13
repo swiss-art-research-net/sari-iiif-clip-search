@@ -1,10 +1,8 @@
-version: "3"
 services:
   clip-service:
     container_name: ${PROJECT_NAME}_service
     image: swissartresearx/sari-iiif-clip-search:latest
     build: .
-    platform: linux/amd64
     logging:
       driver: "json-file"
       options:
@@ -14,12 +12,17 @@ services:
       interval: 5m
       timeout: 10s
       retries: 2
-      start_period: 40s
     environment:
       - CLIP_DATA_DIRECTORY=${CLIP_DATA_DIRECTORY}
+      - WORKDIR=/workdir
+      - PORT=${PORT}:5000
+      - MODE=${MODE:-SPARQL}
     ports:
-      - ${PORT}:5000
+      # Host port defaults to 8000; container port defaults to 5000 (override via env).
+      - ${PORT:-8000}:5000
     volumes:
       - ./data:/workdir/data
       - ./precomputedFeatures:/precomputedFeatures
       - ./src:/workdir/src
+      - ./Taskfile.yml:/workdir/Taskfile.yml:ro
+      - ./.env:/workdir/.env:ro

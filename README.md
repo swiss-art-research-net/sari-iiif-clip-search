@@ -2,7 +2,8 @@
 
 A service to index images based on IIIF URLs and enable semantic free text search based on [CLIP](https://github.com/openai/CLIP).
 
-
+  * [Development](#development)
+  * [Tasks](#tasks)
   * [Query Service](#query-service)
     + [REST API](#rest-api)
     + [SPARQL Endpoint](#sparql-endpoint)
@@ -17,6 +18,9 @@ A service to index images based on IIIF URLs and enable semantic free text searc
 > The repository utilises [Git LFS](https://git-lfs.com/) for storing large files like embeddings. Ensure Git LFS is installed before cloning to download these files correctly.
 
 ## Development
+
+<details>
+<summary>Show more</summary>
 
 ### Managing dependencies
 
@@ -47,7 +51,35 @@ pip-compile requirements.in --output-file=requirements.txt --upgrade-package=tor
 ```
 pytest -s -v
 ```
-  
+</details>
+
+
+## Tasks
+
+The pipeline can be controlled by the [Task](https://taskfile.dev/#/) runner. The tasks are defined in the `Taskfile.yml` file.
+
+As a very first thing, start the service
+
+```sh
+docker compose up -d clip-service
+```
+
+To list available tasks, run:
+
+```sh
+docker compose exec clip-service task --list
+```
+
+This will output a list of tasks:
+
+```
+* build-index:                                 Build the CLIP search index from CSV or SPARQL sources
+* build-index-csv:                             Convenience wrapper for CSV mode
+* build-index-sparql:                          Convenience wrapper for SPARQL mode
+* start-clip-service:                          Start the CLIP search API server
+* test:                                        Run tests
+```
+
 ## Query Service
 
 CLIP Search can be used as a service that can be queried through a simple REST API or through (pseudo) SPARQL.
@@ -61,7 +93,26 @@ cp .env.example .env
 
 Adjust the values in your `.env` file as required. The `CLIP_DATA_DIRECTORY` should point to a directory containing the extracted CLIP features. You can either use one of those provided in `precomputedFeatures` or you can extract your own using the provided `build.py` script.
 
-Run the service using `docker-compose up -d`. The service is now reachable at `http://localhost:5000` (using the default port). Note that the service takes some time to start up as it initialises the CLIP model.
+To connect the service to an existing Docker network, create a `docker-compose.override.yml` file and add the following content:
+
+```yaml
+version: "3"
+services:
+  clip-service:
+    networks:
+      - external_docker_network
+
+networks:
+  external_docker_network:
+    name: your_external_docker_network # Name of the external docker network
+```
+
+Run the service using the following command:
+```bash
+docker compose exec task start-clip-service
+``` 
+
+The service is now reachable at `http://localhost:5000` (using the default port). Note that the service takes some time to start up as it initialises the CLIP model.
 
 ### REST API
 
@@ -138,7 +189,7 @@ The example query below illustrates the supported features:
 To use the CLIP Search with a custom collection of images, the `build.py` script found in `./src` can be used.
 The script operates either in SPARQL mode or in CSV mode.
 
-In SPARQL mode, a SPARQL query and a SPARQL endpoint are required. The query needs to retrieve the IIIF image URLs 
+In SPARQL mode, a path to a SPARQL query and a SPARQL endpoint are required. The query needs to retrieve the IIIF image URLs 
 bound to the variable `?iiif_url`. If another variable is used, it can be provided via the `--iiifColumn` option.
 
 In CSV mode the path to a CSV file is required. The CSV file needs to contain the IIIF image URLs in a column named `iiif_url`.
@@ -156,27 +207,22 @@ directory can be deleted (the script retains them locally can to speed up later 
 ### SPARQL mode example
 
 ```bash
-python src/build.py \
-    --mode SPARQL \
-    --imageQuery "PREFIX dcterms: <http://purl.org/dc/terms/ PREFIX la: <https://linked.art/ns/terms/> SELECT ?iiif_url WHERE { ?service a la:DigitalService ; dcterms:conformsTo <http://iiif.io/api/image> ; la:access_point ?iiif_url .}  ORDER BY ?iiif_url LIMIT 100" \
-    --endpoint http://example.org/sparql \
-    --dataDir ./myFeatures
+docker compose exec clip-service task build-index-sparql
 ```
 
 ### CSV mode example
 
 ```bash
-python src/build.py \
-    --mode CSV \
-    --csvFile /path/to/csv/file.csv \
-    --dataDir ./myFeatures
+docker compose exec clip-service task build-index-csv
 ```
 
 ### Parameters
 
+They can be passed via the `.env` file or as additional arguments to the task:
+
 ```
     --mode: The mode of operation. Either SPARQL or CSV.
-    --imageQuery: The SPARQL query to retrieve the IIIF image URLs. Required in SPARQL mode.
+    --imageQueryPath: The path to the SPARQL query to retrieve the IIIF image URLs. Required in SPARQL mode.
     --endpoint: The SPARQL endpoint to query. Required in SPARQL mode.
     --csvFile: The path to the CSV file. Required in CSV mode
     --dataDir: The path to the directory where the features will be stored.
@@ -187,8 +233,10 @@ python src/build.py \
 
 ## REST API Swagger
 
-```swagger
-swagger: "2.0"
+<details>
+<summary>Show more</summary>
+
+```swaggerswagger: "2.0"
 info:
   version: "1.0.0"
   title: "IIIF CLIP Search"
@@ -204,7 +252,17 @@ paths:
       - name: "str"
         in: "query"
         description: "A string to query the index with"
-        required: true
+        required: false
+        type: "string"
+      - name: "url"
+        in: "query"
+        description: "An URL of an image to query the index with"
+        required: false
+        type: "string"
+      - name: "image"
+        in: "query"
+        description: "A base64 encoded image to query the index with"
+        required: false
         type: "string"
       - name: "minSore"
         in: "query"
@@ -228,15 +286,26 @@ paths:
               $ref: "#/definitions/queryResponse"
         "500":
           description: "An error occured"
+          
 definitions:
   queryResponse:
     type: "object"
     properties:
+      "score":
+        type: "number"
+        format: "float"
+        minimum: 0
+        maximum: 1
+      "imageId":
+        type: "string"
       "url":
         type: "string"
       "score":
         type: "integer"
+      "link":
+        type: "string"
 ```
+</details>
 
 ## Acknowledgements
 
