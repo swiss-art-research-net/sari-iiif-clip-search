@@ -7,11 +7,6 @@ vars:
   DATA_DIR: '{{default "/workdir/data" .ENV.CLIP_DATA_DIRECTORY}}'
 
 tasks:
-  default:
-    desc: Show available tasks
-    cmds:
-      - task --list
-
   build-index:
     desc: Build the CLIP search index from CSV or SPARQL sources
     summary: |
