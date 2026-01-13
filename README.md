@@ -58,22 +58,21 @@ pytest -s -v
 
 The pipeline can be controlled by the [Task](https://taskfile.dev/#/) runner. The tasks are defined in the `Taskfile.yml` file.
 
-As a very first thing, start the jobs service
+As a very first thing, start the service
 
 ```sh
-docker compose --profile jobs up -d jobs
+docker compose up -d clip-service
 ```
 
 To list available tasks, run:
 
 ```sh
-docker compose exec jobs task --list
+docker compose exec clip-service task --list
 ```
 
 This will output a list of tasks:
 
 ```
-* default:                                     Default task
 * build-index:                                 Build the CLIP search index from CSV or SPARQL sources
 * build-index-csv:                             Convenience wrapper for CSV mode
 * build-index-sparql:                          Convenience wrapper for SPARQL mode
@@ -101,16 +100,19 @@ version: "3"
 services:
   clip-service:
     networks:
-      - default
       - external_docker_network
 
 networks:
-  default: null
   external_docker_network:
     name: your_external_docker_network # Name of the external docker network
 ```
 
-Run the service using `docker-compose up -d`. The service is now reachable at `http://localhost:5000` (using the default port). Note that the service takes some time to start up as it initialises the CLIP model.
+Run the service using the following command:
+```bash
+docker compose exec task start-clip-service
+``` 
+
+The service is now reachable at `http://localhost:5000` (using the default port). Note that the service takes some time to start up as it initialises the CLIP model.
 
 ### REST API
 
@@ -187,7 +189,7 @@ The example query below illustrates the supported features:
 To use the CLIP Search with a custom collection of images, the `build.py` script found in `./src` can be used.
 The script operates either in SPARQL mode or in CSV mode.
 
-In SPARQL mode, a apth to a SPARQL query and a SPARQL endpoint are required. The query needs to retrieve the IIIF image URLs 
+In SPARQL mode, a path to a SPARQL query and a SPARQL endpoint are required. The query needs to retrieve the IIIF image URLs 
 bound to the variable `?iiif_url`. If another variable is used, it can be provided via the `--iiifColumn` option.
 
 In CSV mode the path to a CSV file is required. The CSV file needs to contain the IIIF image URLs in a column named `iiif_url`.
@@ -205,23 +207,18 @@ directory can be deleted (the script retains them locally can to speed up later 
 ### SPARQL mode example
 
 ```bash
-python src/build.py \
-    --mode SPARQL \
-    --imageQueryPath /path/to/query.sparql \
-    --endpoint http://example.org/sparql \
-    --dataDir ./myFeatures
+docker compose exec clip-service task build-index-sparql
 ```
 
 ### CSV mode example
 
 ```bash
-python src/build.py \
-    --mode CSV \
-    --csvFile /path/to/csv/file.csv \
-    --dataDir ./myFeatures
+docker compose exec clip-service task build-index-csv
 ```
 
 ### Parameters
+
+They can be passed via the `.env` file or as additional arguments to the task:
 
 ```
     --mode: The mode of operation. Either SPARQL or CSV.

@@ -8,38 +8,21 @@ services:
       options:
         max-size: "10m"
     healthcheck:
-      test: wget -q http://0.0.0.0:${INTERNAL_PORT:-5000} || exit 1
+      test: wget -q http://0.0.0.0:5000 || exit 1
       interval: 5m
       timeout: 10s
       retries: 2
     environment:
       - CLIP_DATA_DIRECTORY=${CLIP_DATA_DIRECTORY}
+      - WORKDIR=/workdir
+      - PORT=${PORT}:5000
+      - MODE=${MODE:-SPARQL}
     ports:
       # Host port defaults to 8000; container port defaults to 5000 (override via env).
-      - ${PORT:-8000}:${INTERNAL_PORT:-5000}
-    volumes:
-      - ./data:/workdir/data
-      - ./precomputedFeatures:/precomputedFeatures
-      - ./src:/workdir/src
-
-  jobs:
-    container_name: ${PROJECT_NAME}_jobs
-    image: swissartresearx/sari-iiif-clip-search:latest
-    build: .
-    working_dir: /workdir
-    # Keep container alive for exec'ing tasks; run tasks with `docker compose exec jobs task ...`
-    entrypoint: ["tail", "-f", "/dev/null"]
-    environment:
-      - CLIP_DATA_DIRECTORY=${CLIP_DATA_DIRECTORY}
-      - WORKDIR=/workdir
-      - PORT=${PORT:-5000}
-      - INTERNAL_PORT=${INTERNAL_PORT:-5000}
-      - MODE=${MODE:-SPARQL}
+      - ${PORT:-8000}:5000
     volumes:
       - ./data:/workdir/data
       - ./precomputedFeatures:/precomputedFeatures
       - ./src:/workdir/src
       - ./Taskfile.yml:/workdir/Taskfile.yml:ro
       - ./.env:/workdir/.env:ro
-    profiles:
-      - jobs

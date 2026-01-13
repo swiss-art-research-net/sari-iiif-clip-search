@@ -22,4 +22,5 @@ ENV FLASK_APP=/workdir/src/api.py
 
 VOLUME ["/workdir/data"]
 
-CMD ["python", "src/api.py"]
+#CMD ["python", "src/api.py"]
+CMD ["tail", "-f", "/dev/null"]
